@@ -1,0 +1,364 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Adventures in necrocoding</title>
+  <meta name="author" content="Dmitry Gutov">
+
+  
+  <meta name="description" content="Looks like this change has gone largely unnoticed, aside from occasional bug
+reports when it failed and emitted a warning. Meanwhile, the speed-up it &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://dgutov.github.com/dgutov/">
+  <link href="/dgutov/favicon.png" rel="icon">
+  <link href="/dgutov/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+   <link href="/dgutov/stylesheets/data-table.css" media="screen, projection" rel="stylesheet" type="text/css" />
+  <script src="/dgutov/javascripts/modernizr-2.0.js"></script>
+  <script src="/dgutov/javascripts/ender.js"></script>
+  <script src="/dgutov/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/dgutov/atom.xml" rel="alternate" title="Adventures in necrocoding" type="application/atom+xml">
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href='http://fonts.googleapis.com/css?family=Lato:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
+
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+</hgroup>
+
+</header>
+  <!-- <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/dgutov/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:dgutov.github.com/dgutov" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/dgutov/">Blog</a></li>
+  <li><a href="/dgutov/blog/archives">Archives</a></li>
+</ul>
+
+</nav> -->
+  <div id="main">
+    <div id="content">
+      <div class="blog-index">
+  
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/dgutov/blog/2013/04/07/emacs-24-dot-3-s-killer-feature-eager-macro-expansion/">Emacs 24.3&#8217;s Killer Feature: Eager Macro-Expansion</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2013-04-07T00:03:00+04:00" pubdate data-updated="true">Apr 7<span>th</span>, 2013</time>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Looks like this change has gone largely unnoticed, aside from occasional bug
+reports when it failed and emitted a warning.</p>
+
+<p>Meanwhile, the speed-up it provides for uncompiled code ranges from nice to
+amazing, depending on the amount and complexity of macros used.</p>
+
+<h2>Intro</h2>
+
+<p>I first <a href="http://debbugs.gnu.org/cgi/bugreport.cgi?bug=13605">noticed</a> the
+difference when benchmarking an <a href="https://github.com/purcell/mmm-mode">mmm-mode</a>
+function that calls <code>syntax-propertize-function</code> from different major modes,
+including <code>ruby-mode</code>.</p>
+
+<p><code>ruby-syntax-propertize-function</code>, like most of the similar functions, uses
+<code>syntax-propertize-rules</code>, a distinctly complex macro. The difference between
+interpreted and compiled code was orders of magnitude, and it was especially
+noticeable in <code>mmm-syntax-propertize-function</code>, because the ERB code example I
+usually use for performance testing has ~200 ERB regions, so that&#8217;s the amount
+of times <code>ruby-syntax-propertize-function</code> was called.</p>
+
+<h2>Some numbers</h2>
+
+<p>For a more practical example, let&#8217;s measure the time
+<a href="https://github.com/mooz/js2-mode/">js2-mode</a> parser takes to process a large
+source file.
+All ~1500 lines of <a href="http://backbonejs.org/backbone.js">uncompressed Backbone.js</a>.</p>
+
+<p><code>js2-mode</code> has always been notoriously slow in interpreted mode, due to the
+heavy use of <code>defstruct</code> facility and other macros from the <code>cl</code> package.</p>
+
+<table>
+<thead>
+<tr>
+<th>   Version </th>
+<th> Interpreted (time, s) </th>
+<th> Compiled (time, s)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Emacs 24.2 </td>
+<td>                6.4251 </td>
+<td>             0.3025</td>
+</tr>
+<tr>
+<td>Emacs 24.3 </td>
+<td>                0.5026 </td>
+<td>             0.2524</td>
+</tr>
+</tbody>
+</table>
+
+
+<p>So, compiled code became a bit faster. Not critical, but nice.</p>
+
+<p>Interpreted code became <em>a lot</em> faster, losing to the compiled code only by the
+factor of 2.</p>
+
+<p>This is huge, it means that we can drop the strict recommendation to compile the
+package when installing manually, for Emacs 24.3 and later. I&#8217;m in no hurry to
+change the doc, but the amount of dissatisfied keyboard jockeys who routinely
+skip the documentation will go down, at least on this subject.</p>
+
+<p>It&#8217;s especially nice for me personally: having to recompile the code after
+making some changes has always been a pain. Authors of other Elisp packages and
+users with a lot of code in their init files should also see the benefit.</p>
+
+<h2>More details</h2>
+
+<p>Not having studied the innards of <code>bytecomp.el</code> in detail, I&#8217;ll stick to what we
+can glean from experiment.</p>
+
+<p>A good way to see what some function really does is fire up the Emacs Lisp REPL
+(<code>M-x ielm</code>) and there evaluate <code>(symbol-function 'foo)</code>, where <code>foo</code> is the
+function in question.</p>
+
+<p>As an aside, this is also a good way to find out what some macro like
+<code>define-minor-mode</code> does without studying it in detail: just look at the body of
+the resulting <code>-mode</code> function.</p>
+
+<p>Take this definition:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='scheme'><span class='line'><span class="p">(</span><span class="nf">defun</span> <span class="nv">foo</span> <span class="p">()</span>
+</span><span class='line'>  <span class="p">(</span><span class="nf">when</span> <span class="nv">t</span>
+</span><span class='line'>    <span class="p">(</span><span class="nf">dotimes</span> <span class="p">(</span><span class="nf">i</span> <span class="mi">10</span><span class="p">))))</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>With Emacs 24.3, you can (sometimes unwittingly) avoid the eager macro-expansion
+by using <code>eval-last-sexp</code> (<code>C-x C-e</code>) instead of <code>eval-defun</code> (<code>C-M-x</code>) or
+<code>eval-buffer</code> (no default binding). So we can try it both ways.</p>
+
+<p>Without eager expansion, the body looks very familiar:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='scheme'><span class='line'><span class="nv">ELISP&gt;</span> <span class="p">(</span><span class="nf">symbol-function</span> <span class="ss">&#39;foo</span><span class="p">)</span>
+</span><span class='line'><span class="p">(</span><span class="k">lambda </span><span class="nv">nil</span>
+</span><span class='line'>  <span class="p">(</span><span class="nf">when</span> <span class="nv">t</span>
+</span><span class='line'>    <span class="p">(</span><span class="nf">dotimes</span>
+</span><span class='line'>        <span class="p">(</span><span class="nf">i</span> <span class="mi">10</span><span class="p">))))</span>
+</span><span class='line'>
+</span><span class='line'><span class="nv">ELISP&gt;</span> <span class="p">(</span><span class="nf">js2-time</span> <span class="p">(</span><span class="nf">dotimes</span> <span class="p">(</span><span class="nf">i</span> <span class="mi">1000</span><span class="p">)</span> <span class="p">(</span><span class="nf">foo</span><span class="p">)))</span>
+</span><span class='line'><span class="mf">0.0367</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>With eager expansion, we can see that it has been reduced to basic forms:</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+</pre></td><td class='code'><pre><code class='scheme'><span class='line'><span class="nv">ELISP&gt;</span> <span class="p">(</span><span class="nf">symbol-function</span> <span class="ss">&#39;foo</span><span class="p">)</span>
+</span><span class='line'><span class="p">(</span><span class="k">lambda </span><span class="nv">nil</span>
+</span><span class='line'>  <span class="p">(</span><span class="k">if </span><span class="nv">t</span>
+</span><span class='line'>      <span class="p">(</span><span class="nf">progn</span>
+</span><span class='line'>        <span class="p">(</span><span class="nf">progn</span>
+</span><span class='line'>          <span class="p">(</span><span class="nf">let</span>
+</span><span class='line'>              <span class="p">((</span><span class="nf">--dotimes-limit--</span> <span class="mi">10</span><span class="p">)</span>
+</span><span class='line'>               <span class="p">(</span><span class="nf">i</span> <span class="mi">0</span><span class="p">))</span>
+</span><span class='line'>            <span class="p">(</span><span class="nf">while</span>
+</span><span class='line'>                <span class="p">(</span><span class="nb">&lt; </span><span class="nv">i</span> <span class="nv">--dotimes-limit--</span><span class="p">)</span>
+</span><span class='line'>              <span class="p">(</span><span class="nf">setq</span> <span class="nv">i</span>
+</span><span class='line'>                    <span class="p">(</span><span class="mi">1</span><span class="nv">+</span> <span class="nv">i</span><span class="p">))))))))</span>
+</span><span class='line'>
+</span><span class='line'><span class="nv">ELISP&gt;</span> <span class="p">(</span><span class="nf">js2-time</span> <span class="p">(</span><span class="nf">dotimes</span> <span class="p">(</span><span class="nf">i</span> <span class="mi">1000</span><span class="p">)</span> <span class="p">(</span><span class="nf">foo</span><span class="p">)))</span>
+</span><span class='line'><span class="mf">0.0086</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The numbers fluctuate heavily with repeated invocations, but the second version
+is always several times faster. The &#8220;familiar&#8221; version has to expand the macros
+each time the function body is evaluated, which drags the performance down
+significantly.</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  <div class="pagination">
+    
+    <a href="archives">Blog Archives</a>
+    
+  </div>
+</div>
+<aside class="sidebar">
+  
+    <section>
+  <ul id="recent_posts">
+      <li class="post">
+      <a href="http://dgutov.github.com/dgutov" alt="Home"><img src="/dgutov/images/Home.png"></a>
+      <a href="http://dgutov.github.com/dgutov/archives/" alt="Archives"><img src="/dgutov/images/Calendar.png"></a>
+      <!-- <a href="mailto:" alt="E-Mail"><img src="/dgutov/images/Envelope.png"></a> &#8211;>
+      <a href="http://dgutov.github.com/dgutov/atom.xml" alt="subscribe feed"><img src="/dgutov/images/rss_big.png"></a>
+      </li>
+  </ul>
+</section>
+<section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/dgutov/blog/2013/04/07/emacs-24-dot-3-s-killer-feature-eager-macro-expansion/">Emacs 24.3&#8217;s Killer Feature: Eager Macro-Expansion</a>
+      </li>
+    
+  </ul>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating&#8230;</li>
+  </ul>
+  
+  <a href="https://github.com/dgutov">@dgutov</a> on GitHub
+  
+  <script type="text/javascript">
+    $.domReady(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'dgutov',
+            count: 5,
+            skip_forks: false,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/dgutov/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+  
+</aside>
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2013 - Dmitry Gutov -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'dgutov-github';
+      
+        
+        var disqus_script = 'count.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+</body>
+</html>

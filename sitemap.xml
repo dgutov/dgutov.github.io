@@ -1,0 +1,25 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<urlset xmlns='http://www.sitemaps.org/schemas/sitemap/0.9'>
+    <url>
+        <loc>
+            http://dgutov.github.com/dgutov/blog/2013/04/07/emacs-24-dot-3-s-killer-feature-eager-macro-expansion/
+        </loc>
+        <lastmod>2013-04-07T01:19:14+04:00</lastmod>
+    </url>
+    <url>
+        <loc>http://dgutov.github.com/dgutov/archives/</loc>
+        <lastmod>2013-04-07T01:19:14+04:00</lastmod>
+    </url>
+    <url>
+        <loc>http://dgutov.github.com/dgutov/blog/archives/</loc>
+        <lastmod>2013-04-07T01:19:14+04:00</lastmod>
+    </url>
+    <url>
+        <loc>http://dgutov.github.com/dgutov/</loc>
+        <lastmod>2013-04-07T01:19:14+04:00</lastmod>
+    </url>
+    <url>
+        <loc>http://dgutov.github.com/dgutov/robots.txt</loc>
+        <lastmod>2013-04-06T21:39:36+04:00</lastmod>
+    </url>
+</urlset>
