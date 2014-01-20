@@ -4,7 +4,7 @@
   <title><![CDATA[Dmitry Gutov]]></title>
   <link href="http://dgutov.github.io/atom.xml" rel="self"/>
   <link href="http://dgutov.github.io/"/>
-  <updated>2014-01-20T05:04:54+02:00</updated>
+  <updated>2014-01-20T13:14:58+02:00</updated>
   <id>http://dgutov.github.io/</id>
   <author>
     <name><![CDATA[Dmitry Gutov]]></name>
@@ -132,8 +132,8 @@ need additional indentation.</p>
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>The above behavior is based on my personal preferences, so please let
-me know how it works for you.</p>
+<p>The above list is based on my personal preference, so please let me
+know how it works for you.</p>
 
 <p>Hopefully, this general behavior will also spread to other major
 modes.</p>
