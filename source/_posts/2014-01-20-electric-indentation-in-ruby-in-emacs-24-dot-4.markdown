@@ -82,8 +82,8 @@ foo
 t|.bar
 ```
 
-The above behavior is based on my personal preferences, so please let
-me know how it works for you.
+The above list is based on my personal preference, so please let me
+know how it works for you.
 
 Hopefully, this general behavior will also spread to other major
 modes.
