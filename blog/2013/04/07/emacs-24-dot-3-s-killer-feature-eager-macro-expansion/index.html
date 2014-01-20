@@ -95,7 +95,7 @@ reports when it failed and emitted a warning. Meanwhile, the speed-up it &hellip
   
 
 
-<time datetime="2013-04-07T00:03:00+04:00" pubdate data-updated="true">Apr 7<span>th</span>, 2013</time>
+<time datetime="2013-04-07T00:03:00+03:00" pubdate data-updated="true">Apr 7<span>th</span>, 2013</time>
         
       </p>
     
@@ -119,12 +119,12 @@ including <code>ruby-mode</code>.</p>
 <code>syntax-propertize-rules</code>, a distinctly complex macro. The difference between
 interpreted and compiled code was orders of magnitude, and it was especially
 noticeable in <code>mmm-syntax-propertize-function</code>, because the ERB code example I
-usually use for performance testing has ~200 ERB regions, so that&#8217;s the amount
+usually use for performance testing has ~200 ERB regions, so that&rsquo;s the amount
 of times <code>ruby-syntax-propertize-function</code> was called.</p>
 
 <h2>Some numbers</h2>
 
-<p>For a more practical example, let&#8217;s measure the time
+<p>For a more practical example, let&rsquo;s measure the time
 <a href="https://github.com/mooz/js2-mode/">js2-mode</a> parser takes to process a large
 source file.
 All ~1500 lines of <a href="http://backbonejs.org/backbone.js">uncompressed Backbone.js</a>.</p>
@@ -161,17 +161,17 @@ heavy use of <code>defstruct</code> facility and other macros from the <code>cl<
 factor of 2.</p>
 
 <p>This is huge, it means that we can drop the strict recommendation to compile the
-package when installing manually, for Emacs 24.3 and later. I&#8217;m in no hurry to
+package when installing manually, for Emacs 24.3 and later. I&rsquo;m in no hurry to
 change the doc, but the amount of dissatisfied keyboard jockeys who routinely
 skip the documentation will go down, at least on this subject.</p>
 
-<p>It&#8217;s especially nice for me personally: having to recompile the code after
+<p>It&rsquo;s especially nice for me personally: having to recompile the code after
 making some changes has always been a pain. Authors of other Elisp packages and
 users with a lot of code in their init files should also see the benefit.</p>
 
 <h2>More details</h2>
 
-<p>Not having studied the innards of <code>bytecomp.el</code> in detail, I&#8217;ll stick to what we
+<p>Not having studied the innards of <code>bytecomp.el</code> in detail, I&rsquo;ll stick to what we
 can glean from experiment.</p>
 
 <p>A good way to see what some function really does is fire up the Emacs Lisp REPL
@@ -254,7 +254,7 @@ by using <code>eval-last-sexp</code> (<code>C-x C-e</code>) instead of <code>eva
 
 
 <p>The numbers fluctuate heavily with repeated invocations, but the second version
-is always several times faster. The &#8220;familiar&#8221; version has to expand the macros
+is always several times faster. The &ldquo;familiar&rdquo; version has to expand the macros
 each time the function body is evaluated, which drags the performance down
 significantly.</p>
 </div>
@@ -279,7 +279,7 @@ significantly.</p>
   
 
 
-<time datetime="2013-04-07T00:03:00+04:00" pubdate data-updated="true">Apr 7<span>th</span>, 2013</time>
+<time datetime="2013-04-07T00:03:00+03:00" pubdate data-updated="true">Apr 7<span>th</span>, 2013</time>
       
 
 
@@ -296,6 +296,8 @@ significantly.</p>
     
     <p class="meta">
       
+      
+        <a class="basic-alignment right" href="/blog/2014/01/20/electric-indentation-in-ruby-in-emacs-24-dot-4/" title="Next Post: Electric Indentation in Ruby in Emacs 24.4">Electric Indentation in Ruby in Emacs 24.4 &raquo;</a>
       
     </p>
   </footer>
@@ -324,6 +326,10 @@ significantly.</p>
 <section>
   <h1>Recent Posts</h1>
   <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014/01/20/electric-indentation-in-ruby-in-emacs-24-dot-4/">Electric Indentation in Ruby in Emacs 24.4</a>
+      </li>
     
       <li class="post">
         <a href="/blog/2013/04/07/emacs-24-dot-3-s-killer-feature-eager-macro-expansion/">Emacs 24.3's Killer Feature: Eager Macro-Expansion</a>
@@ -369,7 +375,7 @@ significantly.</p>
     </div>
   </div>
   <footer role="contentinfo"><p>
-  Copyright &copy; 2013 - Dmitry Gutov -
+  Copyright &copy; 2014 - Dmitry Gutov -
   <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
 </p>
 

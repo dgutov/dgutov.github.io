@@ -5,7 +5,7 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Dmitry Gutov</title>
+  <title>Electric Indentation in Ruby in Emacs 24.4 - Dmitry Gutov</title>
   <meta name="author" content="Dmitry Gutov">
 
   
@@ -21,7 +21,7 @@ straightforward way possible: &hellip;">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://dgutov.github.io/">
+  <link rel="canonical" href="http://dgutov.github.io/blog/2014/01/20/electric-indentation-in-ruby-in-emacs-24-dot-4/">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
    <link href="/stylesheets/data-table.css" media="screen, projection" rel="stylesheet" type="text/css" />
@@ -76,15 +76,12 @@ straightforward way possible: &hellip;">
 </nav> -->
   <div id="main">
     <div id="content">
-      <div class="blog-index">
+      <div>
+<article class="hentry" role="article">
   
-  
-  
-    <article>
-      
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2014/01/20/electric-indentation-in-ruby-in-emacs-24-dot-4/">Electric Indentation in Ruby in Emacs 24.4</a></h1>
+      <h1 class="entry-title">Electric Indentation in Ruby in Emacs 24.4</h1>
     
     
       <p class="meta">
@@ -107,7 +104,7 @@ straightforward way possible: &hellip;">
   </header>
 
 
-  <div class="entry-content"><h2>Intro</h2>
+<div class="entry-content"><h2>Intro</h2>
 
 <p>Although <code>electric-indent-mode</code> will be
 <a href="http://emacsredux.com/blog/2014/01/19/a-peek-at-emacs-24-dot-4-auto-indentation-by-default/">on by default</a>
@@ -227,22 +224,16 @@ me know how it works for you.</p>
 <p>Hopefully, this general behavior will also spread to other major
 modes.</p>
 </div>
-  
-  
 
 
-    </article>
-  
-  
-    <article>
+  <footer>
+    <p class="meta">
       
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/04/07/emacs-24-dot-3-s-killer-feature-eager-macro-expansion/">Emacs 24.3&#8217;s Killer Feature: Eager Macro-Expansion</a></h1>
-    
-    
-      <p class="meta">
-        
+  
+
+<span class="byline author vcard">Posted by <span class="fn">Dmitry Gutov</span></span>
+
+      
 
 
 
@@ -254,181 +245,38 @@ modes.</p>
   
 
 
-<time datetime="2013-04-07T00:03:00+03:00" pubdate data-updated="true">Apr 7<span>th</span>, 2013</time>
-        
-      </p>
+<time datetime="2014-01-20T03:14:40+02:00" pubdate data-updated="true">Jan 20<span>th</span>, 2014</time>
+      
+
+
+    </p>
     
-  </header>
-
-
-  <div class="entry-content"><p>Looks like this change has gone largely unnoticed, aside from occasional bug
-reports when it failed and emitted a warning.</p>
-
-<p>Meanwhile, the speed-up it provides for uncompiled code ranges from nice to
-amazing, depending on the amount and complexity of macros used.</p>
-
-<h2>Intro</h2>
-
-<p>I first <a href="http://debbugs.gnu.org/cgi/bugreport.cgi?bug=13605">noticed</a> the
-difference when benchmarking an <a href="https://github.com/purcell/mmm-mode">mmm-mode</a>
-function that calls <code>syntax-propertize-function</code> from different major modes,
-including <code>ruby-mode</code>.</p>
-
-<p><code>ruby-syntax-propertize-function</code>, like most of the similar functions, uses
-<code>syntax-propertize-rules</code>, a distinctly complex macro. The difference between
-interpreted and compiled code was orders of magnitude, and it was especially
-noticeable in <code>mmm-syntax-propertize-function</code>, because the ERB code example I
-usually use for performance testing has ~200 ERB regions, so that&rsquo;s the amount
-of times <code>ruby-syntax-propertize-function</code> was called.</p>
-
-<h2>Some numbers</h2>
-
-<p>For a more practical example, let&rsquo;s measure the time
-<a href="https://github.com/mooz/js2-mode/">js2-mode</a> parser takes to process a large
-source file.
-All ~1500 lines of <a href="http://backbonejs.org/backbone.js">uncompressed Backbone.js</a>.</p>
-
-<p><code>js2-mode</code> has always been notoriously slow in interpreted mode, due to the
-heavy use of <code>defstruct</code> facility and other macros from the <code>cl</code> package.</p>
-
-<table>
-<thead>
-<tr>
-<th>   Version </th>
-<th> Interpreted (time, s) </th>
-<th> Compiled (time, s)</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Emacs 24.2 </td>
-<td>                6.4251 </td>
-<td>             0.3025</td>
-</tr>
-<tr>
-<td>Emacs 24.3 </td>
-<td>                0.5026 </td>
-<td>             0.2524</td>
-</tr>
-</tbody>
-</table>
-
-
-<p>So, compiled code became a bit faster. Not critical, but nice.</p>
-
-<p>Interpreted code became <em>a lot</em> faster, losing to the compiled code only by the
-factor of 2.</p>
-
-<p>This is huge, it means that we can drop the strict recommendation to compile the
-package when installing manually, for Emacs 24.3 and later. I&rsquo;m in no hurry to
-change the doc, but the amount of dissatisfied keyboard jockeys who routinely
-skip the documentation will go down, at least on this subject.</p>
-
-<p>It&rsquo;s especially nice for me personally: having to recompile the code after
-making some changes has always been a pain. Authors of other Elisp packages and
-users with a lot of code in their init files should also see the benefit.</p>
-
-<h2>More details</h2>
-
-<p>Not having studied the innards of <code>bytecomp.el</code> in detail, I&rsquo;ll stick to what we
-can glean from experiment.</p>
-
-<p>A good way to see what some function really does is fire up the Emacs Lisp REPL
-(<code>M-x ielm</code>) and there evaluate <code>(symbol-function 'foo)</code>, where <code>foo</code> is the
-function in question.</p>
-
-<p>As an aside, this is also a good way to find out what some macro like
-<code>define-minor-mode</code> does without studying it in detail: just look at the body of
-the resulting <code>-mode</code> function.</p>
-
-<p>Take this definition:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='scheme'><span class='line'><span class="p">(</span><span class="nf">defun</span> <span class="nv">foo</span> <span class="p">()</span>
-</span><span class='line'>  <span class="p">(</span><span class="nf">when</span> <span class="nv">t</span>
-</span><span class='line'>    <span class="p">(</span><span class="nf">dotimes</span> <span class="p">(</span><span class="nf">i</span> <span class="mi">10</span><span class="p">))))</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>With Emacs 24.3, you can (sometimes unwittingly) avoid the eager macro-expansion
-by using <code>eval-last-sexp</code> (<code>C-x C-e</code>) instead of <code>eval-defun</code> (<code>C-M-x</code>) or
-<code>eval-buffer</code> (no default binding). So we can try it both ways.</p>
-
-<p>Without eager expansion, the body looks very familiar:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class='scheme'><span class='line'><span class="nv">ELISP&gt;</span> <span class="p">(</span><span class="nf">symbol-function</span> <span class="ss">&#39;foo</span><span class="p">)</span>
-</span><span class='line'><span class="p">(</span><span class="k">lambda </span><span class="nv">nil</span>
-</span><span class='line'>  <span class="p">(</span><span class="nf">when</span> <span class="nv">t</span>
-</span><span class='line'>    <span class="p">(</span><span class="nf">dotimes</span>
-</span><span class='line'>        <span class="p">(</span><span class="nf">i</span> <span class="mi">10</span><span class="p">))))</span>
-</span><span class='line'>
-</span><span class='line'><span class="nv">ELISP&gt;</span> <span class="p">(</span><span class="nf">js2-time</span> <span class="p">(</span><span class="nf">dotimes</span> <span class="p">(</span><span class="nf">i</span> <span class="mi">1000</span><span class="p">)</span> <span class="p">(</span><span class="nf">foo</span><span class="p">)))</span>
-</span><span class='line'><span class="mf">0.0367</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>With eager expansion, we can see that it has been reduced to basic forms:</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-</pre></td><td class='code'><pre><code class='scheme'><span class='line'><span class="nv">ELISP&gt;</span> <span class="p">(</span><span class="nf">symbol-function</span> <span class="ss">&#39;foo</span><span class="p">)</span>
-</span><span class='line'><span class="p">(</span><span class="k">lambda </span><span class="nv">nil</span>
-</span><span class='line'>  <span class="p">(</span><span class="k">if </span><span class="nv">t</span>
-</span><span class='line'>      <span class="p">(</span><span class="nf">progn</span>
-</span><span class='line'>        <span class="p">(</span><span class="nf">progn</span>
-</span><span class='line'>          <span class="p">(</span><span class="nf">let</span>
-</span><span class='line'>              <span class="p">((</span><span class="nf">--dotimes-limit--</span> <span class="mi">10</span><span class="p">)</span>
-</span><span class='line'>               <span class="p">(</span><span class="nf">i</span> <span class="mi">0</span><span class="p">))</span>
-</span><span class='line'>            <span class="p">(</span><span class="nf">while</span>
-</span><span class='line'>                <span class="p">(</span><span class="nb">&lt; </span><span class="nv">i</span> <span class="nv">--dotimes-limit--</span><span class="p">)</span>
-</span><span class='line'>              <span class="p">(</span><span class="nf">setq</span> <span class="nv">i</span>
-</span><span class='line'>                    <span class="p">(</span><span class="mi">1</span><span class="nv">+</span> <span class="nv">i</span><span class="p">))))))))</span>
-</span><span class='line'>
-</span><span class='line'><span class="nv">ELISP&gt;</span> <span class="p">(</span><span class="nf">js2-time</span> <span class="p">(</span><span class="nf">dotimes</span> <span class="p">(</span><span class="nf">i</span> <span class="mi">1000</span><span class="p">)</span> <span class="p">(</span><span class="nf">foo</span><span class="p">)))</span>
-</span><span class='line'><span class="mf">0.0086</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>The numbers fluctuate heavily with repeated invocations, but the second version
-is always several times faster. The &ldquo;familiar&rdquo; version has to expand the macros
-each time the function body is evaluated, which drags the performance down
-significantly.</p>
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://dgutov.github.io/blog/2014/01/20/electric-indentation-in-ruby-in-emacs-24-dot-4/" data-via="" data-counturl="http://dgutov.github.io/blog/2014/01/20/electric-indentation-in-ruby-in-emacs-24-dot-4/" >Tweet</a>
+  
+  
+  
 </div>
-  
-  
 
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2013/04/07/emacs-24-dot-3-s-killer-feature-eager-macro-expansion/" title="Previous Post: Emacs 24.3's Killer Feature: Eager Macro-Expansion">&laquo; Emacs 24.3's Killer Feature: Eager Macro-Expansion</a>
+      
+      
+    </p>
+  </footer>
+</article>
 
-    </article>
-  
-  <div class="pagination">
-    
-    <a href="archives">Blog Archives</a>
-    
-  </div>
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
 </div>
+  </section>
+
+</div>
+
 <aside class="sidebar">
   
     <section>
@@ -450,7 +298,7 @@ significantly.</p>
       </li>
     
       <li class="post">
-        <a href="/blog/2013/04/07/emacs-24-dot-3-s-killer-feature-eager-macro-expansion/">Emacs 24.3&#8217;s Killer Feature: Eager Macro-Expansion</a>
+        <a href="/blog/2013/04/07/emacs-24-dot-3-s-killer-feature-eager-macro-expansion/">Emacs 24.3's Killer Feature: Eager Macro-Expansion</a>
       </li>
     
   </ul>
@@ -459,7 +307,7 @@ significantly.</p>
 <section>
   <h1>GitHub Repos</h1>
   <ul id="gh_repos">
-    <li class="loading">Status updating&#8230;</li>
+    <li class="loading">Status updating...</li>
   </ul>
   
   <a href="https://github.com/dgutov">@dgutov</a> on GitHub
@@ -489,6 +337,7 @@ significantly.</p>
   
 </aside>
 
+
     </div>
   </div>
   <footer role="contentinfo"><p>
@@ -503,7 +352,10 @@ significantly.</p>
       var disqus_shortname = 'dgutov-github';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://dgutov.github.io/blog/2014/01/20/electric-indentation-in-ruby-in-emacs-24-dot-4/';
+        var disqus_url = 'http://dgutov.github.io/blog/2014/01/20/electric-indentation-in-ruby-in-emacs-24-dot-4/';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;

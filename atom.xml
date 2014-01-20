@@ -4,7 +4,7 @@
   <title><![CDATA[Dmitry Gutov]]></title>
   <link href="http://dgutov.github.io/atom.xml" rel="self"/>
   <link href="http://dgutov.github.io/"/>
-  <updated>2013-06-28T03:23:10+04:00</updated>
+  <updated>2014-01-20T03:55:16+02:00</updated>
   <id>http://dgutov.github.io/</id>
   <author>
     <name><![CDATA[Dmitry Gutov]]></name>
@@ -14,9 +14,136 @@
 
   
   <entry>
+    <title type="html"><![CDATA[Electric Indentation in Ruby in Emacs 24.4]]></title>
+    <link href="http://dgutov.github.io/blog/2014/01/20/electric-indentation-in-ruby-in-emacs-24-dot-4/"/>
+    <updated>2014-01-20T03:14:40+02:00</updated>
+    <id>http://dgutov.github.io/blog/2014/01/20/electric-indentation-in-ruby-in-emacs-24-dot-4</id>
+    <content type="html"><![CDATA[<h2>Intro</h2>
+
+<p>Although <code>electric-indent-mode</code> will be
+<a href="http://emacsredux.com/blog/2014/01/19/a-peek-at-emacs-24-dot-4-auto-indentation-by-default/">on by default</a>
+in Emacs 24.4, most of the time it is used only in the most
+straightforward way possible: the major mode adds some characters to
+<code>electric-indent-chars</code>, and after the user types one of them, the
+current line gets reindented.</p>
+
+<p>This limits us to electric indentation only after specific characters,
+not keywords, and without regard to the context.</p>
+
+<p>However, <code>electric-indent-mode</code> allows a more advanced behavior, and
+for that one needs to set <code>electric-indent-functions</code>.</p>
+
+<p>So far, only two modes bundled with Emacs use it: <code>ruby-mode</code> and
+<code>perl-mode</code>, and the latter only to disable electric indentation
+whenever point is not at the end of the line.</p>
+
+<h2>Motivation</h2>
+
+<p>But when we write a function, we can look at the full symbol before
+point, see if it&rsquo;s a keyword, and if it starts at indentation, or if
+it was a keyword before we typed the last character. We can look at
+the character after point and see whether we just turned a
+continuation method call into a straight metod call, which does not
+need additional indentation.</p>
+
+<h2>Examples</h2>
+
+<p><code>|</code> denotes the cursor position.</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="c1"># before</span>
+</span><span class='line'><span class="k">if</span> <span class="n">foo</span>
+</span><span class='line'>  <span class="n">bar</span>
+</span><span class='line'>  <span class="n">els</span><span class="o">|</span>
+</span><span class='line'><span class="k">end</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1"># after</span>
+</span><span class='line'><span class="k">if</span> <span class="n">foo</span>
+</span><span class='line'>  <span class="n">bar</span>
+</span><span class='line'><span class="k">else</span><span class="o">|</span>
+</span><span class='line'><span class="k">end</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="c1"># before</span>
+</span><span class='line'><span class="k">if</span> <span class="n">foo</span>
+</span><span class='line'><span class="k">end</span><span class="o">|</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1"># after</span>
+</span><span class='line'><span class="k">if</span> <span class="n">foo</span>
+</span><span class='line'>  <span class="n">ends</span><span class="o">|</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="c1"># before</span>
+</span><span class='line'><span class="n">foo</span>
+</span><span class='line'><span class="o">|</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1"># after</span>
+</span><span class='line'><span class="n">foo</span>
+</span><span class='line'>  <span class="o">.|</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="c1"># before</span>
+</span><span class='line'><span class="n">foo</span>
+</span><span class='line'>  <span class="o">|.</span><span class="n">bar</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1"># after</span>
+</span><span class='line'><span class="n">foo</span>
+</span><span class='line'><span class="n">t</span><span class="o">|.</span><span class="n">bar</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>The above behavior is based on my personal preferences, so please let
+me know how it works for you.</p>
+
+<p>Hopefully, this general behavior will also spread to other major
+modes.</p>
+]]></content>
+  </entry>
+  
+  <entry>
     <title type="html"><![CDATA[Emacs 24.3's Killer Feature: Eager Macro-Expansion]]></title>
     <link href="http://dgutov.github.io/blog/2013/04/07/emacs-24-dot-3-s-killer-feature-eager-macro-expansion/"/>
-    <updated>2013-04-07T00:03:00+04:00</updated>
+    <updated>2013-04-07T00:03:00+03:00</updated>
     <id>http://dgutov.github.io/blog/2013/04/07/emacs-24-dot-3-s-killer-feature-eager-macro-expansion</id>
     <content type="html"><![CDATA[<p>Looks like this change has gone largely unnoticed, aside from occasional bug
 reports when it failed and emitted a warning.</p>
@@ -35,12 +162,12 @@ including <code>ruby-mode</code>.</p>
 <code>syntax-propertize-rules</code>, a distinctly complex macro. The difference between
 interpreted and compiled code was orders of magnitude, and it was especially
 noticeable in <code>mmm-syntax-propertize-function</code>, because the ERB code example I
-usually use for performance testing has ~200 ERB regions, so that&#8217;s the amount
+usually use for performance testing has ~200 ERB regions, so that&rsquo;s the amount
 of times <code>ruby-syntax-propertize-function</code> was called.</p>
 
 <h2>Some numbers</h2>
 
-<p>For a more practical example, let&#8217;s measure the time
+<p>For a more practical example, let&rsquo;s measure the time
 <a href="https://github.com/mooz/js2-mode/">js2-mode</a> parser takes to process a large
 source file.
 All ~1500 lines of <a href="http://backbonejs.org/backbone.js">uncompressed Backbone.js</a>.</p>
@@ -77,17 +204,17 @@ heavy use of <code>defstruct</code> facility and other macros from the <code>cl<
 factor of 2.</p>
 
 <p>This is huge, it means that we can drop the strict recommendation to compile the
-package when installing manually, for Emacs 24.3 and later. I&#8217;m in no hurry to
+package when installing manually, for Emacs 24.3 and later. I&rsquo;m in no hurry to
 change the doc, but the amount of dissatisfied keyboard jockeys who routinely
 skip the documentation will go down, at least on this subject.</p>
 
-<p>It&#8217;s especially nice for me personally: having to recompile the code after
+<p>It&rsquo;s especially nice for me personally: having to recompile the code after
 making some changes has always been a pain. Authors of other Elisp packages and
 users with a lot of code in their init files should also see the benefit.</p>
 
 <h2>More details</h2>
 
-<p>Not having studied the innards of <code>bytecomp.el</code> in detail, I&#8217;ll stick to what we
+<p>Not having studied the innards of <code>bytecomp.el</code> in detail, I&rsquo;ll stick to what we
 can glean from experiment.</p>
 
 <p>A good way to see what some function really does is fire up the Emacs Lisp REPL
@@ -170,7 +297,7 @@ by using <code>eval-last-sexp</code> (<code>C-x C-e</code>) instead of <code>eva
 
 
 <p>The numbers fluctuate heavily with repeated invocations, but the second version
-is always several times faster. The &#8220;familiar&#8221; version has to expand the macros
+is always several times faster. The &ldquo;familiar&rdquo; version has to expand the macros
 each time the function body is evaluated, which drags the performance down
 significantly.</p>
 ]]></content>
