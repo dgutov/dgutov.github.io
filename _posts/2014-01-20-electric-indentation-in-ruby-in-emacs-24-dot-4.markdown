@@ -3,7 +3,7 @@ layout: post
 title: "Electric Indentation in Ruby in Emacs 24.4"
 date: 2014-01-20 03:14:40 +0200
 comments: true
-categories:
+categories: blog
 ---
 
 ## Intro

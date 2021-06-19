@@ -3,7 +3,7 @@ layout: post
 title: "Emacs 24.3's Killer Feature: Eager Macro-Expansion"
 date: 2013-04-07 00:03
 comments: true
-categories:
+categories: blog
 ---
 
 Looks like this change has gone largely unnoticed, aside from occasional bug
