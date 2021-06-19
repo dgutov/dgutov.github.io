@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>Debugging a syntax error in js2-mode | Emacs and stuff</title>
+<meta name="generator" content="Jekyll v4.2.0" />
+<meta property="og:title" content="Debugging a syntax error in js2-mode" />
+<meta name="author" content="Dmitry Gutov" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="I haven’t been writing much JavaScript code lately, so my personal motivation to work on js2-mode has waned over the years, but it’s a cool package with some dedicated user base. I’m sure there are people who have wanted to contribute, but didn’t know where to start." />
+<meta property="og:description" content="I haven’t been writing much JavaScript code lately, so my personal motivation to work on js2-mode has waned over the years, but it’s a cool package with some dedicated user base. I’m sure there are people who have wanted to contribute, but didn’t know where to start." />
+<link rel="canonical" href="http://dgutov.github.io/blog/2021/06/19/debugging-a-syntax-error-in-js2-mode/" />
+<meta property="og:url" content="http://dgutov.github.io/blog/2021/06/19/debugging-a-syntax-error-in-js2-mode/" />
+<meta property="og:site_name" content="Emacs and stuff" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2021-06-19T03:27:00+03:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Debugging a syntax error in js2-mode" />
+<script type="application/ld+json">
+{"author":{"@type":"Person","name":"Dmitry Gutov"},"url":"http://dgutov.github.io/blog/2021/06/19/debugging-a-syntax-error-in-js2-mode/","headline":"Debugging a syntax error in js2-mode","dateModified":"2021-06-19T03:27:00+03:00","@type":"BlogPosting","datePublished":"2021-06-19T03:27:00+03:00","description":"I haven’t been writing much JavaScript code lately, so my personal motivation to work on js2-mode has waned over the years, but it’s a cool package with some dedicated user base. I’m sure there are people who have wanted to contribute, but didn’t know where to start.","mainEntityOfPage":{"@type":"WebPage","@id":"http://dgutov.github.io/blog/2021/06/19/debugging-a-syntax-error-in-js2-mode/"},"@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://dgutov.github.io/feed.xml" title="Emacs and stuff" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Emacs and stuff</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/about/">About</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Debugging a syntax error in js2-mode</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2021-06-19T03:27:00+03:00" itemprop="datePublished">Jun 19, 2021
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>I haven’t been writing much JavaScript code lately, so my personal
+motivation to work on <a href="https://github.com/mooz/js2-mode/">js2-mode</a>
+has waned over the years, but it’s a cool package with some dedicated
+user base. I’m sure there are people who have wanted to contribute,
+but didn’t know where to start.</p>
+
+<p>Below is the story of debugging and fixing a certain bug which took a
+bit more effort than expected. It can probably serve as a primer both
+for hacking <code class="language-plaintext highlighter-rouge">js2-mode</code> and Emacs Lisp in general. Some pre-existing
+knowledge of Lisp is required, though.</p>
+
+<h2 id="the-problem">The Problem</h2>
+
+<p><a href="https://github.com/mooz/js2-mode/issues/480">The bug</a> related to the
+parsing or trailing commas in arrow functions, which is apparently
+encouraged in some coding styles. This worked in normal functions
+(the feature was added several years prior):</p>
+
+<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">function</span> <span class="nx">foo</span><span class="p">(</span><span class="nx">a</span><span class="p">,</span> <span class="nx">b</span><span class="p">,)</span> <span class="p">{</span>
+  <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">a</span><span class="p">,</span> <span class="nx">b</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>But not in arrow functions:</p>
+
+<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">(</span><span class="nx">a</span><span class="p">,</span> <span class="nx">b</span><span class="p">,)</span> <span class="o">=&gt;</span> <span class="p">{</span> <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="nx">a</span><span class="p">,</span> <span class="nx">b</span><span class="p">)</span> <span class="p">};</span>
+</code></pre></div></div>
+
+<p>An educated guess from one of the reporters was to check
+<code class="language-plaintext highlighter-rouge">js2-parse-function-params</code> and see whether it’s doing something
+wrong. This function parses parameters for all kinds of functions
+(expression, statement or arrow).</p>
+
+<h2 id="late-introduction">Late introduction</h2>
+
+<p><code class="language-plaintext highlighter-rouge">js2-mode</code> uses a recursive-descent parser written in Emacs Lisp,
+originally ported from <a href="https://github.com/mozilla/rhino">Mozilla
+Rhino</a> by <a href="https://steve-yegge.blogspot.com/2008/03/js2-mode-new-javascript-mode-for-emacs.html">Steve
+Yegge</a>.</p>
+
+<p>So most of its code falls into one of 3 categories:</p>
+
+<ul>
+  <li>
+    <p>Type definitions for the values representing the syntax tree nodes, using <code class="language-plaintext highlighter-rouge">cl-defstruct</code>.</p>
+  </li>
+  <li>
+    <p>The token stream and the tokenizer. Main entry point is <code class="language-plaintext highlighter-rouge">js2-get-token</code>.</p>
+  </li>
+  <li>
+    <p>The parser code, which is a bunch of functions that read the tokens
+one by one and call each other in a recursive fashion, according to
+the JavaScript grammar, while employing a couple of tricks to
+resolve the ambiguities (when you can’t tell in advance what kind of
+node you are looking at). And it constructs the syntax tree based on
+the tokens encountered.</p>
+  </li>
+</ul>
+
+<p><code class="language-plaintext highlighter-rouge">js2-parse-function-params</code> is one of such functions, it helps reach
+the list of function parameters and organizes them into a list, which
+is then attached to the function node.</p>
+
+<h2 id="debugging">Debugging</h2>
+
+<p>So it’s a good place to start<sup id="fnref:1" role="doc-noteref"><a href="#fn:1" class="footnote" rel="footnote">1</a></sup>. Let’s switch to <code class="language-plaintext highlighter-rouge">*scratch*</code>, <code class="language-plaintext highlighter-rouge">M-x
+js2-mode</code> in there and paste the problematic snippet of code. It
+flashes in red: syntax errors.</p>
+
+<p>We switch to another window and visit <code class="language-plaintext highlighter-rouge">js2-mode.el</code> in it. Navigate to
+<code class="language-plaintext highlighter-rouge">js2-parse-function-params</code>’s definition and instrument it to be
+debugged with <code class="language-plaintext highlighter-rouge">C-u C-M-x</code>. The echo area briefly flashes:</p>
+
+<blockquote>
+  <p>Edebug: js2-parse-function-params</p>
+</blockquote>
+
+<p>Switch to <code class="language-plaintext highlighter-rouge">*scratch*</code> and type space somewhere at the end, forcing the
+buffer to be re-parsed. Emacs stops at the beginning of the
+instrumented function.</p>
+
+<p>We step through it, to the end, by tapping <code class="language-plaintext highlighter-rouge">SPC</code>, noting the return
+values displayed in the echo area.</p>
+
+<p>Things look wrong, starting from the return value of
+<code class="language-plaintext highlighter-rouge">(js2-peek-token)</code> at the beginning of the loop, followed by
+<code class="language-plaintext highlighter-rouge">js2-must-match-name</code> failing later, and <code class="language-plaintext highlighter-rouge">(js2-create-name-node)</code>
+creating a node with some odd <code class="language-plaintext highlighter-rouge">:name</code> attribute.</p>
+
+<p>The first return value was the best hint, though. It returned 165
+(token types are numbers), which, if you <code class="language-plaintext highlighter-rouge">C-s</code> through the file, leads
+to this line:</p>
+
+<div class="language-scheme highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">(</span><span class="nf">defvar</span> <span class="nv">js2-ARROW</span> <span class="mi">165</span><span class="p">)</span>         <span class="c1">; function arrow (=&gt;)</span>
+</code></pre></div></div>
+
+<p>That means the tokenizer says that the next token after the current is
+the arrow (<code class="language-plaintext highlighter-rouge">=&gt;</code>) already. We can double check that by seeing the value
+of <code class="language-plaintext highlighter-rouge">js2-ts-cursor</code> (by typing <code class="language-plaintext highlighter-rouge">e</code> while debugging and typing the
+variable’s name in the prompt). Its value is 12, the position right
+after the arrow token.</p>
+
+<p>But when we are parsing some construct, we
+really expect to be near its beginning (either at the first token, or
+before it). How come we are not there?</p>
+
+<p>Let’s look at the list of errors. Type <code class="language-plaintext highlighter-rouge">M-x js2-display-error-list</code>,
+and it brings up a bunch of warnings, as well as these three errors:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>line 1: missing ) after formal parameters
+line 1: missing formal parameter
+line 1: missing ) in parenthetical
+</code></pre></div></div>
+
+<p>Searching for the first two brings us back to
+<code class="language-plaintext highlighter-rouge">js2-parse-function-params</code>. These errors are to be expected.</p>
+
+<p>The last one is more interesting. The error message key to search for
+is <code class="language-plaintext highlighter-rouge">"msg.no.paren"</code>, and it appears in 3 functions.</p>
+
+<p>Try instrumenting them all. Only one of them is entered by the code
+parsing this example: <code class="language-plaintext highlighter-rouge">js2-parse-paren-expr-or-generator-comp</code>.</p>
+
+<p>What does it do? It checks whether the current token is followed by
+<code class="language-plaintext highlighter-rouge">for</code>, or a right paren right away, and when it doesn’t, it calls
+<code class="language-plaintext highlighter-rouge">js2-parse-expr</code> and then checks that the said expression is followed
+by <code class="language-plaintext highlighter-rouge">js2-RP</code>, which is the “right paren” token. That fails to happen
+in our case.</p>
+
+<p>Look at <code class="language-plaintext highlighter-rouge">js2-parse-expr</code>. It calls <code class="language-plaintext highlighter-rouge">js2-parse-assign-expr</code> in a
+loop, as long as it finds new <code class="language-plaintext highlighter-rouge">js2-COMMA</code> tokens.</p>
+
+<p>We instrument <code class="language-plaintext highlighter-rouge">js2-parse-expr</code>. Stepping through it, we can see that it
+ends up calling <code class="language-plaintext highlighter-rouge">(js2-parse-assign-expr)</code> twice. The first call
+returns a <code class="language-plaintext highlighter-rouge">js2-name-node</code>, totally expected. The second call, inside
+<code class="language-plaintext highlighter-rouge">(setq right (js2-parse-assign-expr)</code>, returns a <code class="language-plaintext highlighter-rouge">js2-function-node</code>
+(the return value printed in the echo area looks complex, but we can
+make sure by evaluating <code class="language-plaintext highlighter-rouge">(aref right 0)</code>). That’s a surprise.</p>
+
+<p>To see how this happens, let’s go down the rabbit hole. First of all,
+reset all instrumentation by calling <code class="language-plaintext highlighter-rouge">M-x eval-buffer</code> in <code class="language-plaintext highlighter-rouge">js2-mode.el</code>.
+Then let’s simplify the code so the parser does less work for us to follow:</p>
+
+<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">(</span><span class="nx">a</span><span class="p">,)</span> <span class="o">=&gt;</span> <span class="p">{</span> <span class="p">};</span>
+</code></pre></div></div>
+
+<p>Then instrument <code class="language-plaintext highlighter-rouge">js2-parse-expr</code> with <code class="language-plaintext highlighter-rouge">C-u C-M-x</code>, make an edit in the
+code buffer and step through the source until the cursor is after
+<code class="language-plaintext highlighter-rouge">(setq right </code>. Press <code class="language-plaintext highlighter-rouge">i</code> to jump in.</p>
+
+<p>Step through and jump inside every successive call to functions named
+<code class="language-plaintext highlighter-rouge">js2-parse-*</code>. Meaning, <code class="language-plaintext highlighter-rouge">js2-parse-assign-expr</code>, then to
+<code class="language-plaintext highlighter-rouge">js2-parse-cond-expr</code>, and so on. When we reach
+<code class="language-plaintext highlighter-rouge">js2-parse-primary-expr</code>, it finishes with reporting a syntax error
+and creating a <code class="language-plaintext highlighter-rouge">js2-error-node</code>. The thing to note here is it
+“consumes” the current token. The closing paren has just been parsed
+as an error node.</p>
+
+<p>As we continue with stepping through the code with <code class="language-plaintext highlighter-rouge">SPC</code>, we can see
+the execution bubble up to <code class="language-plaintext highlighter-rouge">js2-parse-assign-expr</code>. In there, we see
+<code class="language-plaintext highlighter-rouge">(= tt js2-ARROW)</code> condition match, token stream rewound back to the
+position before the last node parsed, and then parsed again as
+function.</p>
+
+<h2 id="erase-and-rewind">Erase and Rewind</h2>
+
+<p>What’s that about rewinding?</p>
+
+<p>The ability to save and restore the current stream state was
+added for the implementation of the arrow functions’ support.</p>
+
+<p>When the parameter list is parsed first, there is no good way to know
+in advance that it belongs to an arrow function, and it’s not just a
+parenthesized expression. So the parens are first parsed as an
+expression, and then if it’s followed by the arrow token, the stream
+is rewound and the code is parsed as a function.</p>
+
+<p>For all of this to work, any valid parameters list of an arrow
+function has to be parse-able as a parenthesized expession, too.</p>
+
+<p>At some point you might have been wondering: if the parameter list was
+not parsed correctly, and it was not followed by the arrow token, how
+come <code class="language-plaintext highlighter-rouge">js2-parse-function-params</code> was called at all? Hopefully the
+previous section answered that question <sup id="fnref:2" role="doc-noteref"><a href="#fn:2" class="footnote" rel="footnote">2</a></sup>.</p>
+
+<h2 id="solution">Solution</h2>
+
+<p>One possible direction would be to change <code class="language-plaintext highlighter-rouge">js2-parse-primary-expr</code> not
+to consume the current token. Then the inner <code class="language-plaintext highlighter-rouge">js2-parse-assign-expr</code>
+call wouldn’t match <code class="language-plaintext highlighter-rouge">js2-ARROW</code> as next token, <code class="language-plaintext highlighter-rouge">js2-parse-expr</code> would
+find the closing paren fine, and the call to <code class="language-plaintext highlighter-rouge">js2-parse-assign-expr</code>
+up the stack which we never actually stepped through, would find the
+arrow token in its proper place and parse the arrow function fine.</p>
+
+<p>Unfortunately, that’s kind of dangerous, that approach can lead to
+infinite looping. Error nodes should consume tokens to ensure that the
+parser moves forward.</p>
+
+<p>The solution I ended with is a simplified version of Mozilla’s code
+from Firefox. When a feature is already implemented in there, it’s
+often handy to refer to its code (even if it looks much busier than
+the elegant Lisp we are currently editing). The general structure is
+similar enough, the hierarchy of calls in particular.</p>
+
+<p>The function in question is
+<a href="https://github.com/mozilla/gecko-dev/blob/b2b0f5cd62774d1682a3bcf935ee739ca9d8c30e/js/src/frontend/Parser.cpp#L9218">GeneralParser::expr</a>.
+We can see that rather than allow just any kind of errors inside, it
+handles two special cases (trailing comma and triple dot operator),
+and only when within a context where it’s possible that the curent
+node is a function parameter list.</p>
+
+<p>The <a href="https://github.com/mooz/js2-mode/commit/5e9515dff26ed2fa382c97b0b67cdd370f7859f4">change I checked
+in</a>
+is much shorter because we don’t really need to worry about (not)
+reporting syntax errors: whenever we rewind the token stream to a
+previous position, we change <code class="language-plaintext highlighter-rouge">js2-parsed-errors</code> to its previous value
+as well (see the end of <code class="language-plaintext highlighter-rouge">js2-parse-assign-expr</code>).</p>
+
+<p>Performance impact<sup id="fnref:3" role="doc-noteref"><a href="#fn:3" class="footnote" rel="footnote">3</a></sup> from this change was very modest (if noticeable
+at all), so it looks like a success.</p>
+
+<p>Thanks for reading.</p>
+
+<div class="footnotes" role="doc-endnotes">
+  <ol>
+    <li id="fn:1" role="doc-endnote">
+      <p>If you want to follow the scenario step-by-step, you need to check out the version of code that was used at the time, Git commit <code class="language-plaintext highlighter-rouge">b891ede</code>. <a href="#fnref:1" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+    </li>
+    <li id="fn:2" role="doc-endnote">
+      <p>To recap: what was recognized as the “parameter list” expression wasn’t followed by the arrow token, but the “error node” inside it was. So the arrow function was parsed from that position, and <code class="language-plaintext highlighter-rouge">js2-parse-function-params</code> was called then. <a href="#fnref:2" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+    </li>
+    <li id="fn:3" role="doc-endnote">
+      <p>To measure it, you can visit some large-ish file and evaluate <code class="language-plaintext highlighter-rouge">(benchmark 10 '(js2-reparse t))</code>. Then change the implementation, <code class="language-plaintext highlighter-rouge">M-x eval-buffer</code> and run the benchmark again. Do this a few times, to get the feel for the spread. <a href="#fnref:3" class="reversefootnote" role="doc-backlink">&#8617;</a></p>
+    </li>
+  </ol>
+</div>
+
+  </div><a class="u-url" href="/blog/2021/06/19/debugging-a-syntax-error-in-js2-mode/" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Emacs and stuff</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Dmitry Gutov</li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/dgutov"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">dgutov</span></a></li><li><a href="https://www.twitter.com/dgutov"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#twitter"></use></svg> <span class="username">dgutov</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>An awesome description here.</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

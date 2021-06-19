@@ -1,159 +1,104 @@
-
 <!DOCTYPE html>
-<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
-<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
-<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
-<head>
+<html lang="en"><head>
   <meta charset="utf-8">
-  <title>Emacs 24.3's Killer Feature: Eager Macro-Expansion - Dmitry Gutov</title>
-  <meta name="author" content="Dmitry Gutov">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>Emacs 24.3’s Killer Feature: Eager Macro-Expansion | Emacs and stuff</title>
+<meta name="generator" content="Jekyll v4.2.0" />
+<meta property="og:title" content="Emacs 24.3’s Killer Feature: Eager Macro-Expansion" />
+<meta name="author" content="Dmitry Gutov" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Looks like this change has gone largely unnoticed, aside from occasional bug reports when it failed and emitted a warning." />
+<meta property="og:description" content="Looks like this change has gone largely unnoticed, aside from occasional bug reports when it failed and emitted a warning." />
+<link rel="canonical" href="http://dgutov.github.io/blog/2013/04/07/emacs-24-dot-3-s-killer-feature-eager-macro-expansion/" />
+<meta property="og:url" content="http://dgutov.github.io/blog/2013/04/07/emacs-24-dot-3-s-killer-feature-eager-macro-expansion/" />
+<meta property="og:site_name" content="Emacs and stuff" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2013-04-07T00:03:00+03:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Emacs 24.3’s Killer Feature: Eager Macro-Expansion" />
+<script type="application/ld+json">
+{"author":{"@type":"Person","name":"Dmitry Gutov"},"url":"http://dgutov.github.io/blog/2013/04/07/emacs-24-dot-3-s-killer-feature-eager-macro-expansion/","headline":"Emacs 24.3’s Killer Feature: Eager Macro-Expansion","dateModified":"2013-04-07T00:03:00+03:00","@type":"BlogPosting","datePublished":"2013-04-07T00:03:00+03:00","description":"Looks like this change has gone largely unnoticed, aside from occasional bug reports when it failed and emitted a warning.","mainEntityOfPage":{"@type":"WebPage","@id":"http://dgutov.github.io/blog/2013/04/07/emacs-24-dot-3-s-killer-feature-eager-macro-expansion/"},"@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://dgutov.github.io/feed.xml" title="Emacs and stuff" /></head>
+<body><header class="site-header" role="banner">
 
-  
-  <meta name="description" content="Looks like this change has gone largely unnoticed, aside from occasional bug
-reports when it failed and emitted a warning. Meanwhile, the speed-up it &hellip;">
-  
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Emacs and stuff</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
 
-  <!-- http://t.co/dKP3o1e -->
-  <meta name="HandheldFriendly" content="True">
-  <meta name="MobileOptimized" content="320">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  
-  <link rel="canonical" href="http://dgutov.github.io/blog/2013/04/07/emacs-24-dot-3-s-killer-feature-eager-macro-expansion/">
-  <link href="/favicon.png" rel="icon">
-  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
-   <link href="/stylesheets/data-table.css" media="screen, projection" rel="stylesheet" type="text/css" />
-  <script src="/javascripts/modernizr-2.0.js"></script>
-  <script src="/javascripts/ender.js"></script>
-  <script src="/javascripts/octopress.js" type="text/javascript"></script>
-  <link href="/atom.xml" rel="alternate" title="Dmitry Gutov" type="application/atom+xml">
-  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
-<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
-<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
-<link href='http://fonts.googleapis.com/css?family=Lato:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
-
-
-  
-  <script type="text/javascript">
-    var _gaq = _gaq || [];
-    _gaq.push(['_setAccount', 'UA-40276037-1']);
-    _gaq.push(['_trackPageview']);
-
-    (function() {
-      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-    })();
-  </script>
-
-
-</head>
-
-<body   >
-  <header role="banner"><hgroup>
-</hgroup>
-
+        <div class="trigger"><a class="page-link" href="/about/">About</a></div>
+      </nav></div>
 </header>
-  <!-- <nav role="navigation"><ul class="subscription" data-subscription="rss">
-  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
-  
-</ul>
-  
-<form action="http://google.com/search" method="get">
-  <fieldset role="search">
-    <input type="hidden" name="q" value="site:dgutov.github.io" />
-    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
-  </fieldset>
-</form>
-  
-<ul class="main-navigation">
-  <li><a href="/">Blog</a></li>
-  <li><a href="/blog/archives">Archives</a></li>
-</ul>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
 
-</nav> -->
-  <div id="main">
-    <div id="content">
-      <div>
-<article class="hentry" role="article">
-  
-  <header>
-    
-      <h1 class="entry-title">Emacs 24.3's Killer Feature: Eager Macro-Expansion</h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-04-07T00:03:00+03:00" pubdate data-updated="true">Apr 7<span>th</span>, 2013</time>
-        
-      </p>
-    
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Emacs 24.3&#39;s Killer Feature: Eager Macro-Expansion</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2013-04-07T00:03:00+03:00" itemprop="datePublished">Apr 7, 2013
+      </time></p>
   </header>
 
-
-<div class="entry-content"><p>Looks like this change has gone largely unnoticed, aside from occasional bug
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>Looks like this change has gone largely unnoticed, aside from occasional bug
 reports when it failed and emitted a warning.</p>
 
 <p>Meanwhile, the speed-up it provides for uncompiled code ranges from nice to
 amazing, depending on the amount and complexity of macros used.</p>
 
-<h2>Intro</h2>
+<h2 id="intro">Intro</h2>
 
 <p>I first <a href="http://debbugs.gnu.org/cgi/bugreport.cgi?bug=13605">noticed</a> the
 difference when benchmarking an <a href="https://github.com/purcell/mmm-mode">mmm-mode</a>
-function that calls <code>syntax-propertize-function</code> from different major modes,
-including <code>ruby-mode</code>.</p>
+function that calls <code class="language-plaintext highlighter-rouge">syntax-propertize-function</code> from different major modes,
+including <code class="language-plaintext highlighter-rouge">ruby-mode</code>.</p>
 
-<p><code>ruby-syntax-propertize-function</code>, like most of the similar functions, uses
-<code>syntax-propertize-rules</code>, a distinctly complex macro. The difference between
+<p><code class="language-plaintext highlighter-rouge">ruby-syntax-propertize-function</code>, like most of the similar functions, uses
+<code class="language-plaintext highlighter-rouge">syntax-propertize-rules</code>, a distinctly complex macro. The difference between
 interpreted and compiled code was orders of magnitude, and it was especially
-noticeable in <code>mmm-syntax-propertize-function</code>, because the ERB code example I
-usually use for performance testing has ~200 ERB regions, so that&rsquo;s the amount
-of times <code>ruby-syntax-propertize-function</code> was called.</p>
+noticeable in <code class="language-plaintext highlighter-rouge">mmm-syntax-propertize-function</code>, because the ERB code example I
+usually use for performance testing has ~200 ERB regions, so that’s the amount
+of times <code class="language-plaintext highlighter-rouge">ruby-syntax-propertize-function</code> was called.</p>
 
-<h2>Some numbers</h2>
+<h2 id="some-numbers">Some numbers</h2>
 
-<p>For a more practical example, let&rsquo;s measure the time
+<p>For a more practical example, let’s measure the time
 <a href="https://github.com/mooz/js2-mode/">js2-mode</a> parser takes to process a large
 source file.
 All ~1500 lines of <a href="http://backbonejs.org/backbone.js">uncompressed Backbone.js</a>.</p>
 
-<p><code>js2-mode</code> has always been notoriously slow in interpreted mode, due to the
-heavy use of <code>defstruct</code> facility and other macros from the <code>cl</code> package.</p>
+<p><code class="language-plaintext highlighter-rouge">js2-mode</code> has always been notoriously slow in interpreted mode, due to the
+heavy use of <code class="language-plaintext highlighter-rouge">defstruct</code> facility and other macros from the <code class="language-plaintext highlighter-rouge">cl</code> package.</p>
 
 <table>
-<thead>
-<tr>
-<th>   Version </th>
-<th> Interpreted (time, s) </th>
-<th> Compiled (time, s)</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Emacs 24.2 </td>
-<td>                6.4251 </td>
-<td>             0.3025</td>
-</tr>
-<tr>
-<td>Emacs 24.3 </td>
-<td>                0.5026 </td>
-<td>             0.2524</td>
-</tr>
-</tbody>
+  <thead>
+    <tr>
+      <th>Version</th>
+      <th>Interpreted (time, s)</th>
+      <th>Compiled (time, s)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Emacs 24.2</td>
+      <td>6.4251</td>
+      <td>0.3025</td>
+    </tr>
+    <tr>
+      <td>Emacs 24.3</td>
+      <td>0.5026</td>
+      <td>0.2524</td>
+    </tr>
+  </tbody>
 </table>
-
 
 <p>So, compiled code became a bit faster. Not critical, but nice.</p>
 
@@ -161,262 +106,102 @@ heavy use of <code>defstruct</code> facility and other macros from the <code>cl<
 factor of 2.</p>
 
 <p>This is huge, it means that we can drop the strict recommendation to compile the
-package when installing manually, for Emacs 24.3 and later. I&rsquo;m in no hurry to
+package when installing manually, for Emacs 24.3 and later. I’m in no hurry to
 change the doc, but the amount of dissatisfied keyboard jockeys who routinely
 skip the documentation will go down, at least on this subject.</p>
 
-<p>It&rsquo;s especially nice for me personally: having to recompile the code after
+<p>It’s especially nice for me personally: having to recompile the code after
 making some changes has always been a pain. Authors of other Elisp packages and
 users with a lot of code in their init files should also see the benefit.</p>
 
-<h2>More details</h2>
+<h2 id="more-details">More details</h2>
 
-<p>Not having studied the innards of <code>bytecomp.el</code> in detail, I&rsquo;ll stick to what we
+<p>Not having studied the innards of <code class="language-plaintext highlighter-rouge">bytecomp.el</code> in detail, I’ll stick to what we
 can glean from experiment.</p>
 
 <p>A good way to see what some function really does is fire up the Emacs Lisp REPL
-(<code>M-x ielm</code>) and there evaluate <code>(symbol-function 'foo)</code>, where <code>foo</code> is the
+(<code class="language-plaintext highlighter-rouge">M-x ielm</code>) and there evaluate <code class="language-plaintext highlighter-rouge">(symbol-function 'foo)</code>, where <code class="language-plaintext highlighter-rouge">foo</code> is the
 function in question.</p>
 
 <p>As an aside, this is also a good way to find out what some macro like
-<code>define-minor-mode</code> does without studying it in detail: just look at the body of
-the resulting <code>-mode</code> function.</p>
+<code class="language-plaintext highlighter-rouge">define-minor-mode</code> does without studying it in detail: just look at the body of
+the resulting <code class="language-plaintext highlighter-rouge">-mode</code> function.</p>
 
 <p>Take this definition:</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-</pre></td><td class='code'><pre><code class='scheme'><span class='line'><span class="p">(</span><span class="nf">defun</span> <span class="nv">foo</span> <span class="p">()</span>
-</span><span class='line'>  <span class="p">(</span><span class="nf">when</span> <span class="nv">t</span>
-</span><span class='line'>    <span class="p">(</span><span class="nf">dotimes</span> <span class="p">(</span><span class="nf">i</span> <span class="mi">10</span><span class="p">))))</span>
-</span></code></pre></td></tr></table></div></figure>
-
+<div class="language-scheme highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">(</span><span class="nf">defun</span> <span class="nv">foo</span> <span class="p">()</span>
+  <span class="p">(</span><span class="nf">when</span> <span class="nv">t</span>
+    <span class="p">(</span><span class="nf">dotimes</span> <span class="p">(</span><span class="nf">i</span> <span class="mi">10</span><span class="p">))))</span>
+</code></pre></div></div>
 
 <p>With Emacs 24.3, you can (sometimes unwittingly) avoid the eager macro-expansion
-by using <code>eval-last-sexp</code> (<code>C-x C-e</code>) instead of <code>eval-defun</code> (<code>C-M-x</code>) or
-<code>eval-buffer</code> (no default binding). So we can try it both ways.</p>
+by using <code class="language-plaintext highlighter-rouge">eval-last-sexp</code> (<code class="language-plaintext highlighter-rouge">C-x C-e</code>) instead of <code class="language-plaintext highlighter-rouge">eval-defun</code> (<code class="language-plaintext highlighter-rouge">C-M-x</code>) or
+<code class="language-plaintext highlighter-rouge">eval-buffer</code> (no default binding). So we can try it both ways.</p>
 
 <p>Without eager expansion, the body looks very familiar:</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-</pre></td><td class='code'><pre><code class='scheme'><span class='line'><span class="nv">ELISP&gt;</span> <span class="p">(</span><span class="nf">symbol-function</span> <span class="ss">&#39;foo</span><span class="p">)</span>
-</span><span class='line'><span class="p">(</span><span class="k">lambda </span><span class="nv">nil</span>
-</span><span class='line'>  <span class="p">(</span><span class="nf">when</span> <span class="nv">t</span>
-</span><span class='line'>    <span class="p">(</span><span class="nf">dotimes</span>
-</span><span class='line'>        <span class="p">(</span><span class="nf">i</span> <span class="mi">10</span><span class="p">))))</span>
-</span><span class='line'>
-</span><span class='line'><span class="nv">ELISP&gt;</span> <span class="p">(</span><span class="nf">js2-time</span> <span class="p">(</span><span class="nf">dotimes</span> <span class="p">(</span><span class="nf">i</span> <span class="mi">1000</span><span class="p">)</span> <span class="p">(</span><span class="nf">foo</span><span class="p">)))</span>
-</span><span class='line'><span class="mf">0.0367</span>
-</span></code></pre></td></tr></table></div></figure>
+<div class="language-scheme highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">ELISP&gt;</span> <span class="p">(</span><span class="nf">symbol-function</span> <span class="ss">'foo</span><span class="p">)</span>
+<span class="p">(</span><span class="k">lambda</span> <span class="nv">nil</span>
+  <span class="p">(</span><span class="nf">when</span> <span class="nv">t</span>
+    <span class="p">(</span><span class="nf">dotimes</span>
+        <span class="p">(</span><span class="nf">i</span> <span class="mi">10</span><span class="p">))))</span>
 
+<span class="nv">ELISP&gt;</span> <span class="p">(</span><span class="nf">js2-time</span> <span class="p">(</span><span class="nf">dotimes</span> <span class="p">(</span><span class="nf">i</span> <span class="mi">1000</span><span class="p">)</span> <span class="p">(</span><span class="nf">foo</span><span class="p">)))</span>
+<span class="mf">0.0367</span>
+</code></pre></div></div>
 
 <p>With eager expansion, we can see that it has been reduced to basic forms:</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-</pre></td><td class='code'><pre><code class='scheme'><span class='line'><span class="nv">ELISP&gt;</span> <span class="p">(</span><span class="nf">symbol-function</span> <span class="ss">&#39;foo</span><span class="p">)</span>
-</span><span class='line'><span class="p">(</span><span class="k">lambda </span><span class="nv">nil</span>
-</span><span class='line'>  <span class="p">(</span><span class="k">if </span><span class="nv">t</span>
-</span><span class='line'>      <span class="p">(</span><span class="nf">progn</span>
-</span><span class='line'>        <span class="p">(</span><span class="nf">progn</span>
-</span><span class='line'>          <span class="p">(</span><span class="nf">let</span>
-</span><span class='line'>              <span class="p">((</span><span class="nf">--dotimes-limit--</span> <span class="mi">10</span><span class="p">)</span>
-</span><span class='line'>               <span class="p">(</span><span class="nf">i</span> <span class="mi">0</span><span class="p">))</span>
-</span><span class='line'>            <span class="p">(</span><span class="nf">while</span>
-</span><span class='line'>                <span class="p">(</span><span class="nb">&lt; </span><span class="nv">i</span> <span class="nv">--dotimes-limit--</span><span class="p">)</span>
-</span><span class='line'>              <span class="p">(</span><span class="nf">setq</span> <span class="nv">i</span>
-</span><span class='line'>                    <span class="p">(</span><span class="mi">1</span><span class="nv">+</span> <span class="nv">i</span><span class="p">))))))))</span>
-</span><span class='line'>
-</span><span class='line'><span class="nv">ELISP&gt;</span> <span class="p">(</span><span class="nf">js2-time</span> <span class="p">(</span><span class="nf">dotimes</span> <span class="p">(</span><span class="nf">i</span> <span class="mi">1000</span><span class="p">)</span> <span class="p">(</span><span class="nf">foo</span><span class="p">)))</span>
-</span><span class='line'><span class="mf">0.0086</span>
-</span></code></pre></td></tr></table></div></figure>
+<div class="language-scheme highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">ELISP&gt;</span> <span class="p">(</span><span class="nf">symbol-function</span> <span class="ss">'foo</span><span class="p">)</span>
+<span class="p">(</span><span class="k">lambda</span> <span class="nv">nil</span>
+  <span class="p">(</span><span class="k">if</span> <span class="nv">t</span>
+      <span class="p">(</span><span class="nf">progn</span>
+        <span class="p">(</span><span class="nf">progn</span>
+          <span class="p">(</span><span class="k">let</span>
+              <span class="p">((</span><span class="nf">--dotimes-limit--</span> <span class="mi">10</span><span class="p">)</span>
+               <span class="p">(</span><span class="nf">i</span> <span class="mi">0</span><span class="p">))</span>
+            <span class="p">(</span><span class="nf">while</span>
+                <span class="p">(</span><span class="nb">&lt;</span> <span class="nv">i</span> <span class="nv">--dotimes-limit--</span><span class="p">)</span>
+              <span class="p">(</span><span class="nf">setq</span> <span class="nv">i</span>
+                    <span class="p">(</span><span class="nf">1+</span> <span class="nv">i</span><span class="p">))))))))</span>
 
+<span class="nv">ELISP&gt;</span> <span class="p">(</span><span class="nf">js2-time</span> <span class="p">(</span><span class="nf">dotimes</span> <span class="p">(</span><span class="nf">i</span> <span class="mi">1000</span><span class="p">)</span> <span class="p">(</span><span class="nf">foo</span><span class="p">)))</span>
+<span class="mf">0.0086</span>
+</code></pre></div></div>
 
 <p>The numbers fluctuate heavily with repeated invocations, but the second version
-is always several times faster. The &ldquo;familiar&rdquo; version has to expand the macros
+is always several times faster. The “familiar” version has to expand the macros
 each time the function body is evaluated, which drags the performance down
 significantly.</p>
-</div>
 
-
-  <footer>
-    <p class="meta">
-      
-  
-
-<span class="byline author vcard">Posted by <span class="fn">Dmitry Gutov</span></span>
-
-      
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-04-07T00:03:00+03:00" pubdate data-updated="true">Apr 7<span>th</span>, 2013</time>
-      
-
-
-    </p>
-    
-      <div class="sharing">
-  
-  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://dgutov.github.io/blog/2013/04/07/emacs-24-dot-3-s-killer-feature-eager-macro-expansion/" data-via="" data-counturl="http://dgutov.github.io/blog/2013/04/07/emacs-24-dot-3-s-killer-feature-eager-macro-expansion/" >Tweet</a>
-  
-  
-  
-</div>
-
-    
-    <p class="meta">
-      
-      
-        <a class="basic-alignment right" href="/blog/2014/01/20/electric-indentation-in-ruby-in-emacs-24-dot-4/" title="Next Post: Electric Indentation in Ruby in Emacs 24.4">Electric Indentation in Ruby in Emacs 24.4 &raquo;</a>
-      
-    </p>
-  </footer>
+  </div><a class="u-url" href="/blog/2013/04/07/emacs-24-dot-3-s-killer-feature-eager-macro-expansion/" hidden></a>
 </article>
 
-  <section>
-    <h1>Comments</h1>
-    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Emacs and stuff</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Dmitry Gutov</li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/dgutov"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">dgutov</span></a></li><li><a href="https://www.twitter.com/dgutov"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#twitter"></use></svg> <span class="username">dgutov</span></a></li></ul>
 </div>
-  </section>
 
-</div>
-
-<aside class="sidebar">
-  
-    <section>
-  <ul id="recent_posts">
-      <li class="post">
-      <a href="http://dgutov.github.io" alt="Home"><img src="/images/Home.png"></a>
-      <a href="http://dgutov.github.io/archives/" alt="Archives"><img src="/images/Calendar.png"></a>
-      
-      <a href="http://dgutov.github.io/atom.xml" alt="subscribe feed"><img src="/images/rss_big.png"></a>
-      </li>
-  </ul>
-</section>
-<section>
-  <h1>Recent Posts</h1>
-  <ul id="recent_posts">
-    
-      <li class="post">
-        <a href="/blog/2014/01/20/electric-indentation-in-ruby-in-emacs-24-dot-4/">Electric Indentation in Ruby in Emacs 24.4</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2013/04/07/emacs-24-dot-3-s-killer-feature-eager-macro-expansion/">Emacs 24.3's Killer Feature: Eager Macro-Expansion</a>
-      </li>
-    
-  </ul>
-</section>
-
-<section>
-  <h1>GitHub Repos</h1>
-  <ul id="gh_repos">
-    <li class="loading">Status updating...</li>
-  </ul>
-  
-  <a href="https://github.com/dgutov">@dgutov</a> on GitHub
-  
-  <script type="text/javascript">
-    $.domReady(function(){
-        if (!window.jXHR){
-            var jxhr = document.createElement('script');
-            jxhr.type = 'text/javascript';
-            jxhr.src = '/javascripts/libs/jXHR.js';
-            var s = document.getElementsByTagName('script')[0];
-            s.parentNode.insertBefore(jxhr, s);
-        }
-
-        github.showRepos({
-            user: 'dgutov',
-            count: 6,
-            skip_forks: false,
-            target: '#gh_repos'
-        });
-    });
-  </script>
-  <script src="/javascripts/github.js" type="text/javascript"> </script>
-</section>
-
-
-  
-</aside>
-
-
+      <div class="footer-col footer-col-3">
+        <p>An awesome description here.</p>
+      </div>
     </div>
+
   </div>
-  <footer role="contentinfo"><p>
-  Copyright &copy; 2014 - Dmitry Gutov -
-  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
-</p>
 
 </footer>
-  
-
-<script type="text/javascript">
-      var disqus_shortname = 'dgutov-github';
-      
-        
-        // var disqus_developer = 1;
-        var disqus_identifier = 'http://dgutov.github.io/blog/2013/04/07/emacs-24-dot-3-s-killer-feature-eager-macro-expansion/';
-        var disqus_url = 'http://dgutov.github.io/blog/2013/04/07/emacs-24-dot-3-s-killer-feature-eager-macro-expansion/';
-        var disqus_script = 'embed.js';
-      
-    (function () {
-      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
-      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
-      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
-    }());
-</script>
-
-
-
-
-
-
-
-  <script type="text/javascript">
-    (function(){
-      var twitterWidgets = document.createElement('script');
-      twitterWidgets.type = 'text/javascript';
-      twitterWidgets.async = true;
-      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
-      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
-    })();
-  </script>
-
-
-
-
-
 </body>
+
 </html>

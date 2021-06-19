@@ -1,0 +1,436 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.0">Jekyll</generator><link href="http://dgutov.github.io/feed.xml" rel="self" type="application/atom+xml" /><link href="http://dgutov.github.io/" rel="alternate" type="text/html" /><updated>2021-06-19T23:03:30+03:00</updated><id>http://dgutov.github.io/feed.xml</id><title type="html">Emacs and stuff</title><subtitle>An awesome description here.</subtitle><author><name>Dmitry Gutov</name></author><entry><title type="html">Debugging a syntax error in js2-mode</title><link href="http://dgutov.github.io/blog/2021/06/19/debugging-a-syntax-error-in-js2-mode/" rel="alternate" type="text/html" title="Debugging a syntax error in js2-mode" /><published>2021-06-19T03:27:00+03:00</published><updated>2021-06-19T03:27:00+03:00</updated><id>http://dgutov.github.io/blog/2021/06/19/debugging-a-syntax-error-in-js2-mode</id><content type="html" xml:base="http://dgutov.github.io/blog/2021/06/19/debugging-a-syntax-error-in-js2-mode/">&lt;p&gt;I haven’t been writing much JavaScript code lately, so my personal
+motivation to work on &lt;a href=&quot;https://github.com/mooz/js2-mode/&quot;&gt;js2-mode&lt;/a&gt;
+has waned over the years, but it’s a cool package with some dedicated
+user base. I’m sure there are people who have wanted to contribute,
+but didn’t know where to start.&lt;/p&gt;
+
+&lt;p&gt;Below is the story of debugging and fixing a certain bug which took a
+bit more effort than expected. It can probably serve as a primer both
+for hacking &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-mode&lt;/code&gt; and Emacs Lisp in general. Some pre-existing
+knowledge of Lisp is required, though.&lt;/p&gt;
+
+&lt;h2 id=&quot;the-problem&quot;&gt;The Problem&lt;/h2&gt;
+
+&lt;p&gt;&lt;a href=&quot;https://github.com/mooz/js2-mode/issues/480&quot;&gt;The bug&lt;/a&gt; related to the
+parsing or trailing commas in arrow functions, which is apparently
+encouraged in some coding styles. This worked in normal functions
+(the feature was added several years prior):&lt;/p&gt;
+
+&lt;div class=&quot;language-javascript highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kd&quot;&gt;function&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;foo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+  &lt;span class=&quot;nx&quot;&gt;console&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;log&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;);&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;But not in arrow functions:&lt;/p&gt;
+
+&lt;div class=&quot;language-javascript highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;console&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;log&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nx&quot;&gt;b&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;An educated guess from one of the reporters was to check
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-parse-function-params&lt;/code&gt; and see whether it’s doing something
+wrong. This function parses parameters for all kinds of functions
+(expression, statement or arrow).&lt;/p&gt;
+
+&lt;h2 id=&quot;late-introduction&quot;&gt;Late introduction&lt;/h2&gt;
+
+&lt;p&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-mode&lt;/code&gt; uses a recursive-descent parser written in Emacs Lisp,
+originally ported from &lt;a href=&quot;https://github.com/mozilla/rhino&quot;&gt;Mozilla
+Rhino&lt;/a&gt; by &lt;a href=&quot;https://steve-yegge.blogspot.com/2008/03/js2-mode-new-javascript-mode-for-emacs.html&quot;&gt;Steve
+Yegge&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;So most of its code falls into one of 3 categories:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;
+    &lt;p&gt;Type definitions for the values representing the syntax tree nodes, using &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;cl-defstruct&lt;/code&gt;.&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;The token stream and the tokenizer. Main entry point is &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-get-token&lt;/code&gt;.&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;The parser code, which is a bunch of functions that read the tokens
+one by one and call each other in a recursive fashion, according to
+the JavaScript grammar, while employing a couple of tricks to
+resolve the ambiguities (when you can’t tell in advance what kind of
+node you are looking at). And it constructs the syntax tree based on
+the tokens encountered.&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-parse-function-params&lt;/code&gt; is one of such functions, it helps reach
+the list of function parameters and organizes them into a list, which
+is then attached to the function node.&lt;/p&gt;
+
+&lt;h2 id=&quot;debugging&quot;&gt;Debugging&lt;/h2&gt;
+
+&lt;p&gt;So it’s a good place to start&lt;sup id=&quot;fnref:1&quot; role=&quot;doc-noteref&quot;&gt;&lt;a href=&quot;#fn:1&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot;&gt;1&lt;/a&gt;&lt;/sup&gt;. Let’s switch to &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;*scratch*&lt;/code&gt;, &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;M-x
+js2-mode&lt;/code&gt; in there and paste the problematic snippet of code. It
+flashes in red: syntax errors.&lt;/p&gt;
+
+&lt;p&gt;We switch to another window and visit &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-mode.el&lt;/code&gt; in it. Navigate to
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-parse-function-params&lt;/code&gt;’s definition and instrument it to be
+debugged with &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;C-u C-M-x&lt;/code&gt;. The echo area briefly flashes:&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;Edebug: js2-parse-function-params&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;Switch to &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;*scratch*&lt;/code&gt; and type space somewhere at the end, forcing the
+buffer to be re-parsed. Emacs stops at the beginning of the
+instrumented function.&lt;/p&gt;
+
+&lt;p&gt;We step through it, to the end, by tapping &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;SPC&lt;/code&gt;, noting the return
+values displayed in the echo area.&lt;/p&gt;
+
+&lt;p&gt;Things look wrong, starting from the return value of
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;(js2-peek-token)&lt;/code&gt; at the beginning of the loop, followed by
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-must-match-name&lt;/code&gt; failing later, and &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;(js2-create-name-node)&lt;/code&gt;
+creating a node with some odd &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;:name&lt;/code&gt; attribute.&lt;/p&gt;
+
+&lt;p&gt;The first return value was the best hint, though. It returned 165
+(token types are numbers), which, if you &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;C-s&lt;/code&gt; through the file, leads
+to this line:&lt;/p&gt;
+
+&lt;div class=&quot;language-scheme highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;defvar&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;js2-ARROW&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;165&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;         &lt;span class=&quot;c1&quot;&gt;; function arrow (=&amp;gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;That means the tokenizer says that the next token after the current is
+the arrow (&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;=&amp;gt;&lt;/code&gt;) already. We can double check that by seeing the value
+of &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-ts-cursor&lt;/code&gt; (by typing &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;e&lt;/code&gt; while debugging and typing the
+variable’s name in the prompt). Its value is 12, the position right
+after the arrow token.&lt;/p&gt;
+
+&lt;p&gt;But when we are parsing some construct, we
+really expect to be near its beginning (either at the first token, or
+before it). How come we are not there?&lt;/p&gt;
+
+&lt;p&gt;Let’s look at the list of errors. Type &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;M-x js2-display-error-list&lt;/code&gt;,
+and it brings up a bunch of warnings, as well as these three errors:&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;line 1: missing ) after formal parameters
+line 1: missing formal parameter
+line 1: missing ) in parenthetical
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Searching for the first two brings us back to
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-parse-function-params&lt;/code&gt;. These errors are to be expected.&lt;/p&gt;
+
+&lt;p&gt;The last one is more interesting. The error message key to search for
+is &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;&quot;msg.no.paren&quot;&lt;/code&gt;, and it appears in 3 functions.&lt;/p&gt;
+
+&lt;p&gt;Try instrumenting them all. Only one of them is entered by the code
+parsing this example: &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-parse-paren-expr-or-generator-comp&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;What does it do? It checks whether the current token is followed by
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;for&lt;/code&gt;, or a right paren right away, and when it doesn’t, it calls
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-parse-expr&lt;/code&gt; and then checks that the said expression is followed
+by &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-RP&lt;/code&gt;, which is the “right paren” token. That fails to happen
+in our case.&lt;/p&gt;
+
+&lt;p&gt;Look at &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-parse-expr&lt;/code&gt;. It calls &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-parse-assign-expr&lt;/code&gt; in a
+loop, as long as it finds new &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-COMMA&lt;/code&gt; tokens.&lt;/p&gt;
+
+&lt;p&gt;We instrument &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-parse-expr&lt;/code&gt;. Stepping through it, we can see that it
+ends up calling &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;(js2-parse-assign-expr)&lt;/code&gt; twice. The first call
+returns a &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-name-node&lt;/code&gt;, totally expected. The second call, inside
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;(setq right (js2-parse-assign-expr)&lt;/code&gt;, returns a &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-function-node&lt;/code&gt;
+(the return value printed in the echo area looks complex, but we can
+make sure by evaluating &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;(aref right 0)&lt;/code&gt;). That’s a surprise.&lt;/p&gt;
+
+&lt;p&gt;To see how this happens, let’s go down the rabbit hole. First of all,
+reset all instrumentation by calling &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;M-x eval-buffer&lt;/code&gt; in &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-mode.el&lt;/code&gt;.
+Then let’s simplify the code so the parser does less work for us to follow:&lt;/p&gt;
+
+&lt;div class=&quot;language-javascript highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nx&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&amp;gt;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;};&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Then instrument &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-parse-expr&lt;/code&gt; with &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;C-u C-M-x&lt;/code&gt;, make an edit in the
+code buffer and step through the source until the cursor is after
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;(setq right &lt;/code&gt;. Press &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;i&lt;/code&gt; to jump in.&lt;/p&gt;
+
+&lt;p&gt;Step through and jump inside every successive call to functions named
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-parse-*&lt;/code&gt;. Meaning, &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-parse-assign-expr&lt;/code&gt;, then to
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-parse-cond-expr&lt;/code&gt;, and so on. When we reach
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-parse-primary-expr&lt;/code&gt;, it finishes with reporting a syntax error
+and creating a &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-error-node&lt;/code&gt;. The thing to note here is it
+“consumes” the current token. The closing paren has just been parsed
+as an error node.&lt;/p&gt;
+
+&lt;p&gt;As we continue with stepping through the code with &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;SPC&lt;/code&gt;, we can see
+the execution bubble up to &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-parse-assign-expr&lt;/code&gt;. In there, we see
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;(= tt js2-ARROW)&lt;/code&gt; condition match, token stream rewound back to the
+position before the last node parsed, and then parsed again as
+function.&lt;/p&gt;
+
+&lt;h2 id=&quot;erase-and-rewind&quot;&gt;Erase and Rewind&lt;/h2&gt;
+
+&lt;p&gt;What’s that about rewinding?&lt;/p&gt;
+
+&lt;p&gt;The ability to save and restore the current stream state was
+added for the implementation of the arrow functions’ support.&lt;/p&gt;
+
+&lt;p&gt;When the parameter list is parsed first, there is no good way to know
+in advance that it belongs to an arrow function, and it’s not just a
+parenthesized expression. So the parens are first parsed as an
+expression, and then if it’s followed by the arrow token, the stream
+is rewound and the code is parsed as a function.&lt;/p&gt;
+
+&lt;p&gt;For all of this to work, any valid parameters list of an arrow
+function has to be parse-able as a parenthesized expession, too.&lt;/p&gt;
+
+&lt;p&gt;At some point you might have been wondering: if the parameter list was
+not parsed correctly, and it was not followed by the arrow token, how
+come &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-parse-function-params&lt;/code&gt; was called at all? Hopefully the
+previous section answered that question &lt;sup id=&quot;fnref:2&quot; role=&quot;doc-noteref&quot;&gt;&lt;a href=&quot;#fn:2&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot;&gt;2&lt;/a&gt;&lt;/sup&gt;.&lt;/p&gt;
+
+&lt;h2 id=&quot;solution&quot;&gt;Solution&lt;/h2&gt;
+
+&lt;p&gt;One possible direction would be to change &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-parse-primary-expr&lt;/code&gt; not
+to consume the current token. Then the inner &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-parse-assign-expr&lt;/code&gt;
+call wouldn’t match &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-ARROW&lt;/code&gt; as next token, &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-parse-expr&lt;/code&gt; would
+find the closing paren fine, and the call to &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-parse-assign-expr&lt;/code&gt;
+up the stack which we never actually stepped through, would find the
+arrow token in its proper place and parse the arrow function fine.&lt;/p&gt;
+
+&lt;p&gt;Unfortunately, that’s kind of dangerous, that approach can lead to
+infinite looping. Error nodes should consume tokens to ensure that the
+parser moves forward.&lt;/p&gt;
+
+&lt;p&gt;The solution I ended with is a simplified version of Mozilla’s code
+from Firefox. When a feature is already implemented in there, it’s
+often handy to refer to its code (even if it looks much busier than
+the elegant Lisp we are currently editing). The general structure is
+similar enough, the hierarchy of calls in particular.&lt;/p&gt;
+
+&lt;p&gt;The function in question is
+&lt;a href=&quot;https://github.com/mozilla/gecko-dev/blob/b2b0f5cd62774d1682a3bcf935ee739ca9d8c30e/js/src/frontend/Parser.cpp#L9218&quot;&gt;GeneralParser::expr&lt;/a&gt;.
+We can see that rather than allow just any kind of errors inside, it
+handles two special cases (trailing comma and triple dot operator),
+and only when within a context where it’s possible that the curent
+node is a function parameter list.&lt;/p&gt;
+
+&lt;p&gt;The &lt;a href=&quot;https://github.com/mooz/js2-mode/commit/5e9515dff26ed2fa382c97b0b67cdd370f7859f4&quot;&gt;change I checked
+in&lt;/a&gt;
+is much shorter because we don’t really need to worry about (not)
+reporting syntax errors: whenever we rewind the token stream to a
+previous position, we change &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-parsed-errors&lt;/code&gt; to its previous value
+as well (see the end of &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-parse-assign-expr&lt;/code&gt;).&lt;/p&gt;
+
+&lt;p&gt;Performance impact&lt;sup id=&quot;fnref:3&quot; role=&quot;doc-noteref&quot;&gt;&lt;a href=&quot;#fn:3&quot; class=&quot;footnote&quot; rel=&quot;footnote&quot;&gt;3&lt;/a&gt;&lt;/sup&gt; from this change was very modest (if noticeable
+at all), so it looks like a success.&lt;/p&gt;
+
+&lt;p&gt;Thanks for reading.&lt;/p&gt;
+
+&lt;div class=&quot;footnotes&quot; role=&quot;doc-endnotes&quot;&gt;
+  &lt;ol&gt;
+    &lt;li id=&quot;fn:1&quot; role=&quot;doc-endnote&quot;&gt;
+      &lt;p&gt;If you want to follow the scenario step-by-step, you need to check out the version of code that was used at the time, Git commit &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;b891ede&lt;/code&gt;. &lt;a href=&quot;#fnref:1&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+    &lt;/li&gt;
+    &lt;li id=&quot;fn:2&quot; role=&quot;doc-endnote&quot;&gt;
+      &lt;p&gt;To recap: what was recognized as the “parameter list” expression wasn’t followed by the arrow token, but the “error node” inside it was. So the arrow function was parsed from that position, and &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-parse-function-params&lt;/code&gt; was called then. &lt;a href=&quot;#fnref:2&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+    &lt;/li&gt;
+    &lt;li id=&quot;fn:3&quot; role=&quot;doc-endnote&quot;&gt;
+      &lt;p&gt;To measure it, you can visit some large-ish file and evaluate &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;(benchmark 10 '(js2-reparse t))&lt;/code&gt;. Then change the implementation, &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;M-x eval-buffer&lt;/code&gt; and run the benchmark again. Do this a few times, to get the feel for the spread. &lt;a href=&quot;#fnref:3&quot; class=&quot;reversefootnote&quot; role=&quot;doc-backlink&quot;&gt;&amp;#8617;&lt;/a&gt;&lt;/p&gt;
+    &lt;/li&gt;
+  &lt;/ol&gt;
+&lt;/div&gt;</content><author><name>Dmitry Gutov</name></author><category term="blog" /><summary type="html">I haven’t been writing much JavaScript code lately, so my personal motivation to work on js2-mode has waned over the years, but it’s a cool package with some dedicated user base. I’m sure there are people who have wanted to contribute, but didn’t know where to start.</summary></entry><entry><title type="html">Electric Indentation in Ruby in Emacs 24.4</title><link href="http://dgutov.github.io/blog/2014/01/20/electric-indentation-in-ruby-in-emacs-24-dot-4/" rel="alternate" type="text/html" title="Electric Indentation in Ruby in Emacs 24.4" /><published>2014-01-20T03:14:40+02:00</published><updated>2014-01-20T03:14:40+02:00</updated><id>http://dgutov.github.io/blog/2014/01/20/electric-indentation-in-ruby-in-emacs-24-dot-4</id><content type="html" xml:base="http://dgutov.github.io/blog/2014/01/20/electric-indentation-in-ruby-in-emacs-24-dot-4/">&lt;h2 id=&quot;intro&quot;&gt;Intro&lt;/h2&gt;
+
+&lt;p&gt;Although &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;electric-indent-mode&lt;/code&gt; will be
+&lt;a href=&quot;http://emacsredux.com/blog/2014/01/19/a-peek-at-emacs-24-dot-4-auto-indentation-by-default/&quot;&gt;on by default&lt;/a&gt;
+in Emacs 24.4, most of the time it is used only in the most
+straightforward way possible: the major mode adds some characters to
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;electric-indent-chars&lt;/code&gt;, and after the user types one of them, the
+current line gets reindented.&lt;/p&gt;
+
+&lt;p&gt;This limits us to electric indentation only after specific characters,
+not keywords, and without regard to the context.&lt;/p&gt;
+
+&lt;p&gt;However, &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;electric-indent-mode&lt;/code&gt; allows a more advanced behavior, and
+for that one needs to set &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;electric-indent-functions&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;So far, only two modes bundled with Emacs use it: &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ruby-mode&lt;/code&gt; and
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;perl-mode&lt;/code&gt;, and the latter only to disable electric indentation
+whenever point is not at the end of the line.&lt;/p&gt;
+
+&lt;h2 id=&quot;motivation&quot;&gt;Motivation&lt;/h2&gt;
+
+&lt;p&gt;But when we write a function, we can look at the full symbol before
+point, see if it’s a keyword, and if it starts at indentation, or if
+it was a keyword before we typed the last character. We can look at
+the character after point and see whether we just turned a
+continuation method call into a straight metod call, which does not
+need additional indentation.&lt;/p&gt;
+
+&lt;h2 id=&quot;examples&quot;&gt;Examples&lt;/h2&gt;
+
+&lt;p&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;|&lt;/code&gt; denotes the cursor position.&lt;/p&gt;
+
+&lt;div class=&quot;language-ruby highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;# before&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;foo&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;bar&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;els&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# after&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;foo&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;bar&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;else&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;language-ruby highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;# before&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;foo&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# after&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;foo&lt;/span&gt;
+  &lt;span class=&quot;n&quot;&gt;ends&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;language-ruby highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;# before&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;foo&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# after&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;foo&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;.|&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;div class=&quot;language-ruby highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c1&quot;&gt;# before&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;foo&lt;/span&gt;
+  &lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;bar&lt;/span&gt;
+
+&lt;span class=&quot;c1&quot;&gt;# after&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;foo&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;t&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;|&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;bar&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;The above list is based on my personal preference, so please let me
+know how it works for you.&lt;/p&gt;
+
+&lt;p&gt;Hopefully, this general behavior will also spread to other major
+modes.&lt;/p&gt;</content><author><name>Dmitry Gutov</name></author><category term="blog" /><summary type="html">Intro</summary></entry><entry><title type="html">Emacs 24.3’s Killer Feature: Eager Macro-Expansion</title><link href="http://dgutov.github.io/blog/2013/04/07/emacs-24-dot-3-s-killer-feature-eager-macro-expansion/" rel="alternate" type="text/html" title="Emacs 24.3’s Killer Feature: Eager Macro-Expansion" /><published>2013-04-07T00:03:00+03:00</published><updated>2013-04-07T00:03:00+03:00</updated><id>http://dgutov.github.io/blog/2013/04/07/emacs-24-dot-3-s-killer-feature-eager-macro-expansion</id><content type="html" xml:base="http://dgutov.github.io/blog/2013/04/07/emacs-24-dot-3-s-killer-feature-eager-macro-expansion/">&lt;p&gt;Looks like this change has gone largely unnoticed, aside from occasional bug
+reports when it failed and emitted a warning.&lt;/p&gt;
+
+&lt;p&gt;Meanwhile, the speed-up it provides for uncompiled code ranges from nice to
+amazing, depending on the amount and complexity of macros used.&lt;/p&gt;
+
+&lt;h2 id=&quot;intro&quot;&gt;Intro&lt;/h2&gt;
+
+&lt;p&gt;I first &lt;a href=&quot;http://debbugs.gnu.org/cgi/bugreport.cgi?bug=13605&quot;&gt;noticed&lt;/a&gt; the
+difference when benchmarking an &lt;a href=&quot;https://github.com/purcell/mmm-mode&quot;&gt;mmm-mode&lt;/a&gt;
+function that calls &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;syntax-propertize-function&lt;/code&gt; from different major modes,
+including &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ruby-mode&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ruby-syntax-propertize-function&lt;/code&gt;, like most of the similar functions, uses
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;syntax-propertize-rules&lt;/code&gt;, a distinctly complex macro. The difference between
+interpreted and compiled code was orders of magnitude, and it was especially
+noticeable in &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;mmm-syntax-propertize-function&lt;/code&gt;, because the ERB code example I
+usually use for performance testing has ~200 ERB regions, so that’s the amount
+of times &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;ruby-syntax-propertize-function&lt;/code&gt; was called.&lt;/p&gt;
+
+&lt;h2 id=&quot;some-numbers&quot;&gt;Some numbers&lt;/h2&gt;
+
+&lt;p&gt;For a more practical example, let’s measure the time
+&lt;a href=&quot;https://github.com/mooz/js2-mode/&quot;&gt;js2-mode&lt;/a&gt; parser takes to process a large
+source file.
+All ~1500 lines of &lt;a href=&quot;http://backbonejs.org/backbone.js&quot;&gt;uncompressed Backbone.js&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;js2-mode&lt;/code&gt; has always been notoriously slow in interpreted mode, due to the
+heavy use of &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;defstruct&lt;/code&gt; facility and other macros from the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;cl&lt;/code&gt; package.&lt;/p&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;Version&lt;/th&gt;
+      &lt;th&gt;Interpreted (time, s)&lt;/th&gt;
+      &lt;th&gt;Compiled (time, s)&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Emacs 24.2&lt;/td&gt;
+      &lt;td&gt;6.4251&lt;/td&gt;
+      &lt;td&gt;0.3025&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Emacs 24.3&lt;/td&gt;
+      &lt;td&gt;0.5026&lt;/td&gt;
+      &lt;td&gt;0.2524&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;So, compiled code became a bit faster. Not critical, but nice.&lt;/p&gt;
+
+&lt;p&gt;Interpreted code became &lt;em&gt;a lot&lt;/em&gt; faster, losing to the compiled code only by the
+factor of 2.&lt;/p&gt;
+
+&lt;p&gt;This is huge, it means that we can drop the strict recommendation to compile the
+package when installing manually, for Emacs 24.3 and later. I’m in no hurry to
+change the doc, but the amount of dissatisfied keyboard jockeys who routinely
+skip the documentation will go down, at least on this subject.&lt;/p&gt;
+
+&lt;p&gt;It’s especially nice for me personally: having to recompile the code after
+making some changes has always been a pain. Authors of other Elisp packages and
+users with a lot of code in their init files should also see the benefit.&lt;/p&gt;
+
+&lt;h2 id=&quot;more-details&quot;&gt;More details&lt;/h2&gt;
+
+&lt;p&gt;Not having studied the innards of &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;bytecomp.el&lt;/code&gt; in detail, I’ll stick to what we
+can glean from experiment.&lt;/p&gt;
+
+&lt;p&gt;A good way to see what some function really does is fire up the Emacs Lisp REPL
+(&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;M-x ielm&lt;/code&gt;) and there evaluate &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;(symbol-function 'foo)&lt;/code&gt;, where &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;foo&lt;/code&gt; is the
+function in question.&lt;/p&gt;
+
+&lt;p&gt;As an aside, this is also a good way to find out what some macro like
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;define-minor-mode&lt;/code&gt; does without studying it in detail: just look at the body of
+the resulting &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;-mode&lt;/code&gt; function.&lt;/p&gt;
+
+&lt;p&gt;Take this definition:&lt;/p&gt;
+
+&lt;div class=&quot;language-scheme highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;defun&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;foo&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;when&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;t&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;dotimes&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))))&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;With Emacs 24.3, you can (sometimes unwittingly) avoid the eager macro-expansion
+by using &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;eval-last-sexp&lt;/code&gt; (&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;C-x C-e&lt;/code&gt;) instead of &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;eval-defun&lt;/code&gt; (&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;C-M-x&lt;/code&gt;) or
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;eval-buffer&lt;/code&gt; (no default binding). So we can try it both ways.&lt;/p&gt;
+
+&lt;p&gt;Without eager expansion, the body looks very familiar:&lt;/p&gt;
+
+&lt;div class=&quot;language-scheme highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nv&quot;&gt;ELISP&amp;gt;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;symbol-function&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;'foo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;lambda&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;nil&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;when&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;t&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;dotimes&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))))&lt;/span&gt;
+
+&lt;span class=&quot;nv&quot;&gt;ELISP&amp;gt;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;js2-time&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;dotimes&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;foo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)))&lt;/span&gt;
+&lt;span class=&quot;mf&quot;&gt;0.0367&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;With eager expansion, we can see that it has been reduced to basic forms:&lt;/p&gt;
+
+&lt;div class=&quot;language-scheme highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nv&quot;&gt;ELISP&amp;gt;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;symbol-function&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;'foo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;lambda&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;nil&lt;/span&gt;
+  &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;t&lt;/span&gt;
+      &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;progn&lt;/span&gt;
+        &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;progn&lt;/span&gt;
+          &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;let&lt;/span&gt;
+              &lt;span class=&quot;p&quot;&gt;((&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;--dotimes-limit--&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+               &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
+            &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;while&lt;/span&gt;
+                &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;--dotimes-limit--&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+              &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;setq&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;i&lt;/span&gt;
+                    &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;1+&lt;/span&gt; &lt;span class=&quot;nv&quot;&gt;i&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))))))))&lt;/span&gt;
+
+&lt;span class=&quot;nv&quot;&gt;ELISP&amp;gt;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;js2-time&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;dotimes&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;i&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1000&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;foo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)))&lt;/span&gt;
+&lt;span class=&quot;mf&quot;&gt;0.0086&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;The numbers fluctuate heavily with repeated invocations, but the second version
+is always several times faster. The “familiar” version has to expand the macros
+each time the function body is evaluated, which drags the performance down
+significantly.&lt;/p&gt;</content><author><name>Dmitry Gutov</name></author><category term="blog" /><summary type="html">Looks like this change has gone largely unnoticed, aside from occasional bug reports when it failed and emitted a warning.</summary></entry></feed>

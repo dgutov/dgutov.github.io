@@ -1,388 +1,159 @@
-
 <!DOCTYPE html>
-<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
-<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
-<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
-<head>
+<html lang="en"><head>
   <meta charset="utf-8">
-  <title>Electric Indentation in Ruby in Emacs 24.4 - Dmitry Gutov</title>
-  <meta name="author" content="Dmitry Gutov">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>Electric Indentation in Ruby in Emacs 24.4 | Emacs and stuff</title>
+<meta name="generator" content="Jekyll v4.2.0" />
+<meta property="og:title" content="Electric Indentation in Ruby in Emacs 24.4" />
+<meta name="author" content="Dmitry Gutov" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Intro" />
+<meta property="og:description" content="Intro" />
+<link rel="canonical" href="http://dgutov.github.io/blog/2014/01/20/electric-indentation-in-ruby-in-emacs-24-dot-4/" />
+<meta property="og:url" content="http://dgutov.github.io/blog/2014/01/20/electric-indentation-in-ruby-in-emacs-24-dot-4/" />
+<meta property="og:site_name" content="Emacs and stuff" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2014-01-20T03:14:40+02:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Electric Indentation in Ruby in Emacs 24.4" />
+<script type="application/ld+json">
+{"author":{"@type":"Person","name":"Dmitry Gutov"},"url":"http://dgutov.github.io/blog/2014/01/20/electric-indentation-in-ruby-in-emacs-24-dot-4/","headline":"Electric Indentation in Ruby in Emacs 24.4","dateModified":"2014-01-20T03:14:40+02:00","@type":"BlogPosting","datePublished":"2014-01-20T03:14:40+02:00","description":"Intro","mainEntityOfPage":{"@type":"WebPage","@id":"http://dgutov.github.io/blog/2014/01/20/electric-indentation-in-ruby-in-emacs-24-dot-4/"},"@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://dgutov.github.io/feed.xml" title="Emacs and stuff" /></head>
+<body><header class="site-header" role="banner">
 
-  
-  <meta name="description" content="Intro Although electric-indent-mode will be
-on by default
-in Emacs 24.4, most of the time it is used only in the most
-straightforward way possible: &hellip;">
-  
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Emacs and stuff</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
 
-  <!-- http://t.co/dKP3o1e -->
-  <meta name="HandheldFriendly" content="True">
-  <meta name="MobileOptimized" content="320">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-
-  
-  <link rel="canonical" href="http://dgutov.github.io/blog/2014/01/20/electric-indentation-in-ruby-in-emacs-24-dot-4/">
-  <link href="/favicon.png" rel="icon">
-  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
-   <link href="/stylesheets/data-table.css" media="screen, projection" rel="stylesheet" type="text/css" />
-  <script src="/javascripts/modernizr-2.0.js"></script>
-  <script src="/javascripts/ender.js"></script>
-  <script src="/javascripts/octopress.js" type="text/javascript"></script>
-  <link href="/atom.xml" rel="alternate" title="Dmitry Gutov" type="application/atom+xml">
-  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
-<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
-<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
-<link href='http://fonts.googleapis.com/css?family=Lato:400,700,400italic,700italic' rel='stylesheet' type='text/css'>
-
-
-  
-  <script type="text/javascript">
-    var _gaq = _gaq || [];
-    _gaq.push(['_setAccount', 'UA-40276037-1']);
-    _gaq.push(['_trackPageview']);
-
-    (function() {
-      var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-      ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-    })();
-  </script>
-
-
-</head>
-
-<body   >
-  <header role="banner"><hgroup>
-</hgroup>
-
+        <div class="trigger"><a class="page-link" href="/about/">About</a></div>
+      </nav></div>
 </header>
-  <!-- <nav role="navigation"><ul class="subscription" data-subscription="rss">
-  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
-  
-</ul>
-  
-<form action="http://google.com/search" method="get">
-  <fieldset role="search">
-    <input type="hidden" name="q" value="site:dgutov.github.io" />
-    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
-  </fieldset>
-</form>
-  
-<ul class="main-navigation">
-  <li><a href="/">Blog</a></li>
-  <li><a href="/blog/archives">Archives</a></li>
-</ul>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
 
-</nav> -->
-  <div id="main">
-    <div id="content">
-      <div>
-<article class="hentry" role="article">
-  
-  <header>
-    
-      <h1 class="entry-title">Electric Indentation in Ruby in Emacs 24.4</h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2014-01-20T03:14:40+02:00" pubdate data-updated="true">Jan 20<span>th</span>, 2014</time>
-        
-      </p>
-    
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Electric Indentation in Ruby in Emacs 24.4</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2014-01-20T03:14:40+02:00" itemprop="datePublished">Jan 20, 2014
+      </time></p>
   </header>
 
+  <div class="post-content e-content" itemprop="articleBody">
+    <h2 id="intro">Intro</h2>
 
-<div class="entry-content"><h2>Intro</h2>
-
-<p>Although <code>electric-indent-mode</code> will be
+<p>Although <code class="language-plaintext highlighter-rouge">electric-indent-mode</code> will be
 <a href="http://emacsredux.com/blog/2014/01/19/a-peek-at-emacs-24-dot-4-auto-indentation-by-default/">on by default</a>
 in Emacs 24.4, most of the time it is used only in the most
 straightforward way possible: the major mode adds some characters to
-<code>electric-indent-chars</code>, and after the user types one of them, the
+<code class="language-plaintext highlighter-rouge">electric-indent-chars</code>, and after the user types one of them, the
 current line gets reindented.</p>
 
 <p>This limits us to electric indentation only after specific characters,
 not keywords, and without regard to the context.</p>
 
-<p>However, <code>electric-indent-mode</code> allows a more advanced behavior, and
-for that one needs to set <code>electric-indent-functions</code>.</p>
+<p>However, <code class="language-plaintext highlighter-rouge">electric-indent-mode</code> allows a more advanced behavior, and
+for that one needs to set <code class="language-plaintext highlighter-rouge">electric-indent-functions</code>.</p>
 
-<p>So far, only two modes bundled with Emacs use it: <code>ruby-mode</code> and
-<code>perl-mode</code>, and the latter only to disable electric indentation
+<p>So far, only two modes bundled with Emacs use it: <code class="language-plaintext highlighter-rouge">ruby-mode</code> and
+<code class="language-plaintext highlighter-rouge">perl-mode</code>, and the latter only to disable electric indentation
 whenever point is not at the end of the line.</p>
 
-<h2>Motivation</h2>
+<h2 id="motivation">Motivation</h2>
 
 <p>But when we write a function, we can look at the full symbol before
-point, see if it&rsquo;s a keyword, and if it starts at indentation, or if
+point, see if it’s a keyword, and if it starts at indentation, or if
 it was a keyword before we typed the last character. We can look at
 the character after point and see whether we just turned a
 continuation method call into a straight metod call, which does not
 need additional indentation.</p>
 
-<h2>Examples</h2>
+<h2 id="examples">Examples</h2>
 
-<p><code>|</code> denotes the cursor position.</p>
+<p><code class="language-plaintext highlighter-rouge">|</code> denotes the cursor position.</p>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="c1"># before</span>
-</span><span class='line'><span class="k">if</span> <span class="n">foo</span>
-</span><span class='line'>  <span class="n">bar</span>
-</span><span class='line'>  <span class="n">els</span><span class="o">|</span>
-</span><span class='line'><span class="k">end</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1"># after</span>
-</span><span class='line'><span class="k">if</span> <span class="n">foo</span>
-</span><span class='line'>  <span class="n">bar</span>
-</span><span class='line'><span class="k">else</span><span class="o">|</span>
-</span><span class='line'><span class="k">end</span>
-</span></code></pre></td></tr></table></div></figure>
+<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># before</span>
+<span class="k">if</span> <span class="n">foo</span>
+  <span class="n">bar</span>
+  <span class="n">els</span><span class="o">|</span>
+<span class="k">end</span>
 
+<span class="c1"># after</span>
+<span class="k">if</span> <span class="n">foo</span>
+  <span class="n">bar</span>
+<span class="k">else</span><span class="o">|</span>
+<span class="k">end</span>
+</code></pre></div></div>
 
+<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># before</span>
+<span class="k">if</span> <span class="n">foo</span>
+<span class="k">end</span><span class="o">|</span>
 
+<span class="c1"># after</span>
+<span class="k">if</span> <span class="n">foo</span>
+  <span class="n">ends</span><span class="o">|</span>
+</code></pre></div></div>
 
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="c1"># before</span>
-</span><span class='line'><span class="k">if</span> <span class="n">foo</span>
-</span><span class='line'><span class="k">end</span><span class="o">|</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1"># after</span>
-</span><span class='line'><span class="k">if</span> <span class="n">foo</span>
-</span><span class='line'>  <span class="n">ends</span><span class="o">|</span>
-</span></code></pre></td></tr></table></div></figure>
+<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># before</span>
+<span class="n">foo</span>
+<span class="o">|</span>
 
+<span class="c1"># after</span>
+<span class="n">foo</span>
+  <span class="o">.|</span>
+</code></pre></div></div>
 
+<div class="language-ruby highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># before</span>
+<span class="n">foo</span>
+  <span class="o">|</span><span class="p">.</span><span class="nf">bar</span>
 
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="c1"># before</span>
-</span><span class='line'><span class="n">foo</span>
-</span><span class='line'><span class="o">|</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1"># after</span>
-</span><span class='line'><span class="n">foo</span>
-</span><span class='line'>  <span class="o">.|</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-</pre></td><td class='code'><pre><code class='ruby'><span class='line'><span class="c1"># before</span>
-</span><span class='line'><span class="n">foo</span>
-</span><span class='line'>  <span class="o">|.</span><span class="n">bar</span>
-</span><span class='line'>
-</span><span class='line'><span class="c1"># after</span>
-</span><span class='line'><span class="n">foo</span>
-</span><span class='line'><span class="n">t</span><span class="o">|.</span><span class="n">bar</span>
-</span></code></pre></td></tr></table></div></figure>
-
+<span class="c1"># after</span>
+<span class="n">foo</span>
+<span class="n">t</span><span class="o">|</span><span class="p">.</span><span class="nf">bar</span>
+</code></pre></div></div>
 
 <p>The above list is based on my personal preference, so please let me
 know how it works for you.</p>
 
 <p>Hopefully, this general behavior will also spread to other major
 modes.</p>
-</div>
 
-
-  <footer>
-    <p class="meta">
-      
-  
-
-<span class="byline author vcard">Posted by <span class="fn">Dmitry Gutov</span></span>
-
-      
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2014-01-20T03:14:40+02:00" pubdate data-updated="true">Jan 20<span>th</span>, 2014</time>
-      
-
-
-    </p>
-    
-      <div class="sharing">
-  
-  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://dgutov.github.io/blog/2014/01/20/electric-indentation-in-ruby-in-emacs-24-dot-4/" data-via="" data-counturl="http://dgutov.github.io/blog/2014/01/20/electric-indentation-in-ruby-in-emacs-24-dot-4/" >Tweet</a>
-  
-  
-  
-</div>
-
-    
-    <p class="meta">
-      
-        <a class="basic-alignment left" href="/blog/2013/04/07/emacs-24-dot-3-s-killer-feature-eager-macro-expansion/" title="Previous Post: Emacs 24.3's Killer Feature: Eager Macro-Expansion">&laquo; Emacs 24.3's Killer Feature: Eager Macro-Expansion</a>
-      
-      
-    </p>
-  </footer>
+  </div><a class="u-url" href="/blog/2014/01/20/electric-indentation-in-ruby-in-emacs-24-dot-4/" hidden></a>
 </article>
 
-  <section>
-    <h1>Comments</h1>
-    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Emacs and stuff</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Dmitry Gutov</li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/dgutov"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">dgutov</span></a></li><li><a href="https://www.twitter.com/dgutov"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#twitter"></use></svg> <span class="username">dgutov</span></a></li></ul>
 </div>
-  </section>
 
-</div>
-
-<aside class="sidebar">
-  
-    <section>
-  <ul id="recent_posts">
-      <li class="post">
-      <a href="http://dgutov.github.io" alt="Home"><img src="/images/Home.png"></a>
-      <a href="http://dgutov.github.io/archives/" alt="Archives"><img src="/images/Calendar.png"></a>
-      
-      <a href="http://dgutov.github.io/atom.xml" alt="subscribe feed"><img src="/images/rss_big.png"></a>
-      </li>
-  </ul>
-</section>
-<section>
-  <h1>Recent Posts</h1>
-  <ul id="recent_posts">
-    
-      <li class="post">
-        <a href="/blog/2014/01/20/electric-indentation-in-ruby-in-emacs-24-dot-4/">Electric Indentation in Ruby in Emacs 24.4</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2013/04/07/emacs-24-dot-3-s-killer-feature-eager-macro-expansion/">Emacs 24.3's Killer Feature: Eager Macro-Expansion</a>
-      </li>
-    
-  </ul>
-</section>
-
-<section>
-  <h1>GitHub Repos</h1>
-  <ul id="gh_repos">
-    <li class="loading">Status updating...</li>
-  </ul>
-  
-  <a href="https://github.com/dgutov">@dgutov</a> on GitHub
-  
-  <script type="text/javascript">
-    $.domReady(function(){
-        if (!window.jXHR){
-            var jxhr = document.createElement('script');
-            jxhr.type = 'text/javascript';
-            jxhr.src = '/javascripts/libs/jXHR.js';
-            var s = document.getElementsByTagName('script')[0];
-            s.parentNode.insertBefore(jxhr, s);
-        }
-
-        github.showRepos({
-            user: 'dgutov',
-            count: 6,
-            skip_forks: false,
-            target: '#gh_repos'
-        });
-    });
-  </script>
-  <script src="/javascripts/github.js" type="text/javascript"> </script>
-</section>
-
-
-  
-</aside>
-
-
+      <div class="footer-col footer-col-3">
+        <p>An awesome description here.</p>
+      </div>
     </div>
+
   </div>
-  <footer role="contentinfo"><p>
-  Copyright &copy; 2014 - Dmitry Gutov -
-  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
-</p>
 
 </footer>
-  
-
-<script type="text/javascript">
-      var disqus_shortname = 'dgutov-github';
-      
-        
-        // var disqus_developer = 1;
-        var disqus_identifier = 'http://dgutov.github.io/blog/2014/01/20/electric-indentation-in-ruby-in-emacs-24-dot-4/';
-        var disqus_url = 'http://dgutov.github.io/blog/2014/01/20/electric-indentation-in-ruby-in-emacs-24-dot-4/';
-        var disqus_script = 'embed.js';
-      
-    (function () {
-      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
-      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
-      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
-    }());
-</script>
-
-
-
-
-
-
-
-  <script type="text/javascript">
-    (function(){
-      var twitterWidgets = document.createElement('script');
-      twitterWidgets.type = 'text/javascript';
-      twitterWidgets.async = true;
-      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
-      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
-    })();
-  </script>
-
-
-
-
-
 </body>
+
 </html>
