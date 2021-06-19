@@ -41,7 +41,7 @@ An educated guess from one of the reporters was to check
 wrong. This function parses parameters for all kinds of functions
 (expression, statement or arrow).
 
-## Late introduction
+## Late Introduction
 
 `js2-mode` uses a recursive-descent parser written in Emacs Lisp,
 originally ported from [Mozilla
