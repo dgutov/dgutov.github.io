@@ -6,20 +6,23 @@ comments: true
 categories: blog
 ---
 
-I haven't been writing much JavaScript code lately, so my personal motivation
-to work on [js2-mode](https://github.com/mooz/js2-mode/) has waned
-over the years, but it's a cool package with some dedicated user base.
+I haven't been writing much JavaScript code lately, so my personal
+motivation to work on [js2-mode](https://github.com/mooz/js2-mode/)
+has waned over the years, but it's a cool package with some dedicated
+user base. I'm sure there are people who have wanted to contribute,
+but didn't know where to start.
 
 Below is the story of debugging and fixing a certain bug which took a
-bit more effort than expected. It can be helfpul to somebody with
-existing knowledge of Elisp, who maybe wanted to improve some things,
-but didn't know how to approach it.
+bit more effort than expected. It can probably serve as a primer both
+for hacking `js2-mode` and Emacs Lisp in general. Some pre-existing
+knowledge of Lisp is required, though.
 
 ## The Problem
 
 [The bug](https://github.com/mooz/js2-mode/issues/480) related to the
 parsing or trailing commas in arrow functions, which is apparently
-encourages in some coding styles. This worked in normal functions:
+encouraged in some coding styles. This worked in normal functions
+(the feature was added several years prior):
 
 ```javascript
 function foo(a, b,) {
@@ -27,7 +30,7 @@ function foo(a, b,) {
 }
 ```
 
-that support had been added several years ago. But not in arrow functions:
+But not in arrow functions:
 
 ```javascript
 (a, b,) => { console.log(a, b) };
@@ -40,7 +43,7 @@ wrong. This function parses parameters for all kinds of functions
 
 ## Late introduction
 
-`js2-mode` is mostly a recursive-descent parser written in Emacs Lisp,
+`js2-mode` uses a recursive-descent parser written in Emacs Lisp,
 originally ported from [Mozilla
 Rhino](https://github.com/mozilla/rhino) by [Steve
 Yegge](https://steve-yegge.blogspot.com/2008/03/js2-mode-new-javascript-mode-for-emacs.html).
@@ -173,9 +176,9 @@ added for the implementation of the arrow functions' support.
 
 When the parameter list is parsed first, there is no good way to know
 in advance that it belongs to an arrow function, and it's not just a
-parenthesized expression. So the expression is parsed first, and then
-if it's followed by the arrow token, the stream is rewound and the
-code is parsed as a function.
+parenthesized expression. So the parens are first parsed as an
+expression, and then if it's followed by the arrow token, the stream
+is rewound and the code is parsed as a function.
 
 For all of this to work, any valid parameters list of an arrow
 function has to be parse-able as a parenthesized expession, too.
@@ -200,9 +203,9 @@ parser moves forward.
 
 The solution I ended with is a simplified version of Mozilla's code
 from Firefox. When a feature is already implemented in there, it's
-often handy to refer to it code (even if it looks much busier than the
-elegant Lisp we are dealing with). The general structure is similar
-enough, the hierarchy of calls in particular.
+often handy to refer to its code (even if it looks much busier than
+the elegant Lisp we are currently editing). The general structure is
+similar enough, the hierarchy of calls in particular.
 
 The function in question is
 [GeneralParser::expr](https://github.com/mozilla/gecko-dev/blob/b2b0f5cd62774d1682a3bcf935ee739ca9d8c30e/js/src/frontend/Parser.cpp#L9218).
@@ -225,6 +228,6 @@ Thanks for reading.
 
 [^1]: If you want to follow the scenario step-by-step, you need to check out the version of code that was used at the time, Git commit `b891ede`.
 
-[^2]: What was recognized as the "parameter list" expression wasn't followed by the arrow token, but the "error node" was. So that's what was parsed as the arrow function, and that was the token stream position from which `js2-parse-function-params` was called.
+[^2]: To recap: what was recognized as the "parameter list" expression wasn't followed by the arrow token, but the "error node" inside it was. So the arrow function was parsed from that position, and `js2-parse-function-params` was called then.
 
 [^3]: To measure it, you can visit some large-ish file and evaluate `(benchmark 10 '(js2-reparse t))`. Then change the implementation, `M-x eval-buffer` and run the benchmark again. Do this a few times, to get the feel for the spread.
