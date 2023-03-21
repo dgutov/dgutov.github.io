@@ -4,7 +4,11 @@ title: About
 permalink: /about/
 ---
 
-My name is Dmitry Gutov, I'm a software developer from Russia.
+My name is Dmitry Gutov, I'm a software developer from Saint-Petersburg living in Cyprus.
 
-In my spare time I do some free software work, and most of it is
-Emacs-related. I'll be blogging about it here, probably.
+I have a decade plus of experience writing web applications, largely
+focusing on the backend and Ruby/Rails/Grape/etc. I also feel rather
+strongly about proper software testing and developer tools.
+
+Most of my free software work is related to Emacs. I'll be blogging
+about it here, probably.
