@@ -37,3 +37,5 @@ history of the previous file name. Just make sure to set
 able to use it.
 
 ![bottom of vc-print-log for vc-git.el](/assets/images/2024-03-05.png)
+
+This works for Git and Mercurial.
