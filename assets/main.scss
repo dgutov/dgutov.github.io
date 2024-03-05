@@ -1,0 +1,18 @@
+---
+# Only the main Sass file needs front matter (the dashes are enough)
+---
+
+@import "minima";
+
+kbd {
+  border-style: outset;
+  border-width: 2px;
+  border-color: #999999;
+  border-radius: 6px;
+  padding: 1px 2px;
+  font-size: 90%;
+  font-weight: 475;
+  background-color: #f8f8f8;
+  margin: 2px;
+  white-space: nowrap;
+}
