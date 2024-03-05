@@ -1,4 +1,57 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.0">Jekyll</generator><link href="http://dgutov.github.io/feed.xml" rel="self" type="application/atom+xml" /><link href="http://dgutov.github.io/" rel="alternate" type="text/html" /><updated>2021-06-19T23:29:18+03:00</updated><id>http://dgutov.github.io/feed.xml</id><title type="html">Emacs and stuff</title><subtitle>An awesome description here.</subtitle><author><name>Dmitry Gutov</name></author><entry><title type="html">Debugging a syntax error in js2-mode</title><link href="http://dgutov.github.io/blog/2021/06/19/debugging-a-syntax-error-in-js2-mode/" rel="alternate" type="text/html" title="Debugging a syntax error in js2-mode" /><published>2021-06-19T03:27:00+03:00</published><updated>2021-06-19T03:27:00+03:00</updated><id>http://dgutov.github.io/blog/2021/06/19/debugging-a-syntax-error-in-js2-mode</id><content type="html" xml:base="http://dgutov.github.io/blog/2021/06/19/debugging-a-syntax-error-in-js2-mode/">&lt;p&gt;I haven’t been writing much JavaScript code lately, so my personal
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.0">Jekyll</generator><link href="http://dgutov.github.io/feed.xml" rel="self" type="application/atom+xml" /><link href="http://dgutov.github.io/" rel="alternate" type="text/html" /><updated>2024-03-05T03:49:52+02:00</updated><id>http://dgutov.github.io/feed.xml</id><title type="html">Emacs and stuff</title><subtitle>An awesome description here.</subtitle><author><name>Dmitry Gutov</name></author><entry><title type="html">Committing a partial changeset in Emacs</title><link href="http://dgutov.github.io/blog/2024/03/03/committing-a-partial-changeset-in-emacs/" rel="alternate" type="text/html" title="Committing a partial changeset in Emacs" /><published>2024-03-03T22:15:00+02:00</published><updated>2024-03-03T22:15:00+02:00</updated><id>http://dgutov.github.io/blog/2024/03/03/committing-a-partial-changeset-in-emacs</id><content type="html" xml:base="http://dgutov.github.io/blog/2024/03/03/committing-a-partial-changeset-in-emacs/">&lt;p&gt;One of the frequent questions for the built-in Version Control support
+in Emacs has been the ability to commit only a part of the changes in
+a file or several.&lt;/p&gt;
+
+&lt;p&gt;In the command-line, it’s simple (though not always easy): you call
+&lt;kbd&gt;git add -p&lt;/kbd&gt; and iterate through the whole repository diff
+with &lt;kbd&gt;y&lt;/kbd&gt;/&lt;kbd&gt;n&lt;/kbd&gt;/etc. &lt;a href=&quot;https://magit.vc/&quot;&gt;Magit&lt;/a&gt; also
+has an interface for staging and committing from the staging area, but
+that only works for Git and requires you to switch to its UI first.&lt;/p&gt;
+
+&lt;h2 id=&quot;using-vc&quot;&gt;Using VC&lt;/h2&gt;
+
+&lt;p&gt;One of the less noticed additions in Emacs 29 is the ability to
+&lt;a href=&quot;https://debbugs.gnu.org/52349&quot;&gt;create a commit from a diff buffer&lt;/a&gt;.
+And since &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;diff-mode&lt;/code&gt; provides functionality for editing the diff, you
+can drop the unwanted pieces first (they stay saved on disk) and
+commit the amended changeset.&lt;/p&gt;
+
+&lt;p&gt;Here’s how it works: you press &lt;kbd&gt;C-x v =&lt;/kbd&gt; or &lt;kbd&gt;C-x v
+D&lt;/kbd&gt; to show the diff for the current file, or the whole
+repository, edit the diff using commands such as &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;diff-hunk-kill&lt;/code&gt;
+(&lt;kbd&gt;M-k&lt;/kbd&gt;), &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;diff-split-hunk&lt;/code&gt; (&lt;kbd&gt;C-c C-s&lt;/kbd&gt;), and then
+type &lt;kbd&gt;C-x v v&lt;/kbd&gt; in the same buffer to proceed to the familiar
+step “Edit commit message”.&lt;/p&gt;
+
+&lt;p&gt;I also recommend customizing &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;diff-default-read-only&lt;/code&gt; to &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;t&lt;/code&gt; so that
+the short key combinations work right away in &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;diff-mode&lt;/code&gt;, including
+&lt;kbd&gt;n&lt;/kbd&gt; and &lt;kbd&gt;p&lt;/kbd&gt; for hunk navigation and &lt;kbd&gt;k&lt;/kbd&gt; for
+removing hunks. Otherwise those only work after switching to
+read-only-mode (&lt;kbd&gt;C-x C-q&lt;/kbd&gt;)&lt;/p&gt;
+
+&lt;p&gt;Anyway, you enter the commit message and press &lt;kbd&gt;C-c C-c&lt;/kbd&gt; to
+create the commit. This works not only with Git, but also with
+Mercurial repositories, and the fallback implementation endeavors to
+support other VC systems as well (such as Bazaar and SVN), though
+using a slower method. The latter is not as well-tested (the latest
+bug report was regarding an incompatible command-line flags in
+OpenBSD’s &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;patch&lt;/code&gt;), so more feedback welcome.&lt;/p&gt;
+
+&lt;video width=&quot;580&quot; height=&quot;540&quot; preload=&quot;metadata&quot; controls=&quot;&quot;&gt;&lt;source src=&quot;https://github.com/dgutov/dgutov.github.io/assets/271877/a491495d-e411-4296-8f6b-720b54babf7a#.webm&quot; type=&quot;video/webm; codecs=vp8, vorbis&quot; /&gt;&lt;/video&gt;
+
+&lt;h2 id=&quot;using-diff-hl&quot;&gt;Using Diff-HL&lt;/h2&gt;
+
+&lt;p&gt;The workflow described above doesn’t use the staging area, and if you
+are using Magit, you might prefer a simply faster way to stage hunks.&lt;/p&gt;
+
+&lt;p&gt;By popular demand, the new additions to the
+&lt;a href=&quot;https://github.com/dgutov/diff-hl/&quot;&gt;diff-hl&lt;/a&gt; package are the commands
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;diff-hl-stage-current-hunk&lt;/code&gt; and, more recently, &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;diff-hl-stage-dwim&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Either type &lt;kbd&gt;C-x v S&lt;/kbd&gt; to stage the hunk at or above point, or
+prepend it with &lt;kbd&gt;C-u&lt;/kbd&gt; to similarly pop up a buffer where you
+can edit the changeset to stage. Then do the commit with Magit or the
+command line.&lt;/p&gt;</content><author><name>Dmitry Gutov</name></author><category term="blog" /><summary type="html">One of the frequent questions for the built-in Version Control support in Emacs has been the ability to commit only a part of the changes in a file or several.</summary></entry><entry><title type="html">Debugging a syntax error in js2-mode</title><link href="http://dgutov.github.io/blog/2021/06/19/debugging-a-syntax-error-in-js2-mode/" rel="alternate" type="text/html" title="Debugging a syntax error in js2-mode" /><published>2021-06-19T03:27:00+03:00</published><updated>2021-06-19T03:27:00+03:00</updated><id>http://dgutov.github.io/blog/2021/06/19/debugging-a-syntax-error-in-js2-mode</id><content type="html" xml:base="http://dgutov.github.io/blog/2021/06/19/debugging-a-syntax-error-in-js2-mode/">&lt;p&gt;I haven’t been writing much JavaScript code lately, so my personal
 motivation to work on &lt;a href=&quot;https://github.com/mooz/js2-mode/&quot;&gt;js2-mode&lt;/a&gt;
 has waned over the years, but it’s a cool package with some dedicated
 user base. I’m sure there are people who have wanted to contribute,
