@@ -5,7 +5,8 @@ date: 2024-03-05 02:12 +0200
 categories: blog
 ---
 
-This entry is also about an addition in Emacs's VC support.
+This entry is also about an addition in Emacs's VC support
+(development branch, Emacs 30).
 
 Git doesn't really track renames, but supports printing the commit log
 across renames using certain heuristics (seeing that a commit contains
@@ -38,4 +39,4 @@ able to use it.
 
 ![bottom of vc-print-log for vc-git.el](/assets/images/2024-03-05.png)
 
-This is implemented in the development branch (Emacs 30) for Git and Mercurial only.
+This is currently implemented for Git and Mercurial only.
