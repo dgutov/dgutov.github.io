@@ -38,4 +38,4 @@ able to use it.
 
 ![bottom of vc-print-log for vc-git.el](/assets/images/2024-03-05.png)
 
-This works for Git and Mercurial.
+This is implemented in the development branch (Emacs 30) for Git and Mercurial only.
