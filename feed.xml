@@ -1,4 +1,35 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.0">Jekyll</generator><link href="http://dgutov.github.io/feed.xml" rel="self" type="application/atom+xml" /><link href="http://dgutov.github.io/" rel="alternate" type="text/html" /><updated>2024-03-05T03:49:52+02:00</updated><id>http://dgutov.github.io/feed.xml</id><title type="html">Emacs and stuff</title><subtitle>An awesome description here.</subtitle><author><name>Dmitry Gutov</name></author><entry><title type="html">Committing a partial changeset in Emacs</title><link href="http://dgutov.github.io/blog/2024/03/03/committing-a-partial-changeset-in-emacs/" rel="alternate" type="text/html" title="Committing a partial changeset in Emacs" /><published>2024-03-03T22:15:00+02:00</published><updated>2024-03-03T22:15:00+02:00</updated><id>http://dgutov.github.io/blog/2024/03/03/committing-a-partial-changeset-in-emacs</id><content type="html" xml:base="http://dgutov.github.io/blog/2024/03/03/committing-a-partial-changeset-in-emacs/">&lt;p&gt;One of the frequent questions for the built-in Version Control support
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.0">Jekyll</generator><link href="http://dgutov.github.io/feed.xml" rel="self" type="application/atom+xml" /><link href="http://dgutov.github.io/" rel="alternate" type="text/html" /><updated>2024-03-05T05:01:56+02:00</updated><id>http://dgutov.github.io/feed.xml</id><title type="html">Emacs and stuff</title><subtitle>An awesome description here.</subtitle><author><name>Dmitry Gutov</name></author><entry><title type="html">Viewing file history across renames</title><link href="http://dgutov.github.io/blog/2024/03/05/viewing-file-history-across-renames/" rel="alternate" type="text/html" title="Viewing file history across renames" /><published>2024-03-05T02:12:00+02:00</published><updated>2024-03-05T02:12:00+02:00</updated><id>http://dgutov.github.io/blog/2024/03/05/viewing-file-history-across-renames</id><content type="html" xml:base="http://dgutov.github.io/blog/2024/03/05/viewing-file-history-across-renames/">&lt;p&gt;This entry is also about an addition in Emacs’s VC support.&lt;/p&gt;
+
+&lt;p&gt;Git doesn’t really track renames, but supports printing the commit log
+across renames using certain heuristics (seeing that a commit contains
+a deleted and a created file where a big enough percentage of lines
+are the same; copies are detected similarly), but this has to be
+enabled explicitly (the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;--follow&lt;/code&gt; option), and it can end up missing
+commits in some situations with &lt;a href=&quot;https://stackoverflow.com/questions/46487476/git-log-follow-graph-skips-commits&quot;&gt;complex branch merging
+history&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;In Emacs &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;vc-print-log&lt;/code&gt; (&lt;kbd&gt;C-x v l&lt;/kbd&gt;) likewise had problems
+with renames, with &lt;a href=&quot;https://debbugs.gnu.org/8756&quot;&gt;multiple&lt;/a&gt;
+&lt;a href=&quot;https://debbugs.gnu.org/19045&quot;&gt;reports&lt;/a&gt; &lt;a href=&quot;https://debbugs.gnu.org/55871&quot;&gt;over the
+years&lt;/a&gt; and different approaches having been
+proposed. Adding the support for &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;--follow&lt;/code&gt; helped somewhat, but the
+commands to view the diff (&lt;kbd&gt;d&lt;/kbd&gt;), or annotate/blame
+(&lt;kbd&gt;a&lt;/kbd&gt;), or check out that old version (&lt;kbd&gt;f&lt;/kbd&gt;), stayed
+broken when the version had a different file name.&lt;/p&gt;
+
+&lt;p&gt;This difficulty is not specific to Emacs, though, and looking around,
+Github has recently &lt;a href=&quot;https://github.blog/changelog/2022-06-06-view-commit-history-across-file-renames-and-moves/&quot;&gt;adopted a solution for
+this&lt;/a&gt;:
+adding a “show history for that name” link when the current log ends.
+It’s not an original invention either: it started out as a &lt;a href=&quot;https://github.com/jeffstieler/github-follow-extension&quot;&gt;Chrome
+extension&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;Anyway, now we also have a button that allows you to jump to the
+history of the previous file name. Just make sure to set
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;vc-git-print-log-follow&lt;/code&gt; back to its default value (&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;nil&lt;/code&gt;), to be
+able to use it.&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/assets/images/2024-03-05.png&quot; alt=&quot;bottom of vc-print-log for vc-git.el&quot; /&gt;&lt;/p&gt;</content><author><name>Dmitry Gutov</name></author><category term="blog" /><summary type="html">This entry is also about an addition in Emacs’s VC support.</summary></entry><entry><title type="html">Committing a partial changeset in Emacs</title><link href="http://dgutov.github.io/blog/2024/03/03/committing-a-partial-changeset-in-emacs/" rel="alternate" type="text/html" title="Committing a partial changeset in Emacs" /><published>2024-03-03T22:15:00+02:00</published><updated>2024-03-03T22:15:00+02:00</updated><id>http://dgutov.github.io/blog/2024/03/03/committing-a-partial-changeset-in-emacs</id><content type="html" xml:base="http://dgutov.github.io/blog/2024/03/03/committing-a-partial-changeset-in-emacs/">&lt;p&gt;One of the frequent questions for the built-in Version Control support
 in Emacs has been the ability to commit only a part of the changes in
 a file or several.&lt;/p&gt;
 
