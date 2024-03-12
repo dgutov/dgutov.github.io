@@ -14,4 +14,4 @@ Most of my free software work is related to Emacs. I'll be blogging
 about it here sometimes. See [my GitHub Sponsors](https://github.com/sponsors/dgutov) page for more
 details, and maybe chip in if you find my work useful.
 
-I'm currently open for new engagements and contract work.
+I'm currently open for new engagements and contract work. [LinkedIn profile here](https://www.linkedin.com/in/dgutov).
