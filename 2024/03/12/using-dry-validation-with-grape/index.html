@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>Using dry-validation with Grape | Emacs and stuff</title>
+<meta name="generator" content="Jekyll v4.2.0" />
+<meta property="og:title" content="Using dry-validation with Grape" />
+<meta name="author" content="Dmitry Gutov" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Intro" />
+<meta property="og:description" content="Intro" />
+<link rel="canonical" href="http://dgutov.github.io/2024/03/12/using-dry-validation-with-grape/" />
+<meta property="og:url" content="http://dgutov.github.io/2024/03/12/using-dry-validation-with-grape/" />
+<meta property="og:site_name" content="Emacs and stuff" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2024-03-12T01:03:00+02:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Using dry-validation with Grape" />
+<script type="application/ld+json">
+{"@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"http://dgutov.github.io/2024/03/12/using-dry-validation-with-grape/"},"url":"http://dgutov.github.io/2024/03/12/using-dry-validation-with-grape/","author":{"@type":"Person","name":"Dmitry Gutov"},"headline":"Using dry-validation with Grape","dateModified":"2024-03-12T01:03:00+02:00","datePublished":"2024-03-12T01:03:00+02:00","description":"Intro","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://dgutov.github.io/feed.xml" title="Emacs and stuff" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Emacs and stuff</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/about/">About</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Using dry-validation with Grape</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2024-03-12T01:03:00+02:00" itemprop="datePublished">Mar 12, 2024
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <h2 id="intro">Intro</h2>
+
+<p><a href="https://github.com/ruby-grape/grape/">Grape</a> is a popular web
+framework for Ruby, an alternative to Rails when writing an API-only
+application.</p>
+
+<p><a href="https://dry-rb.org/gems/dry-validation/">dry-validation</a> is a
+flexible library for implementing data validation logic, something one
+tends to need more as their project grows.</p>
+
+<p>When an API deals with a certain entity, the shape of endpoint
+parameters in it tends to resemble the shape of the entity itself. And
+if you already have validation rules defined for it somewhere else (or
+intend to do that later, depending on the order the functionality is
+built), you might like to use the same language/library/dsl for
+describing the schema and rules in both cases, to be able to reuse
+some.</p>
+
+<p>Grape comes with its own terse DSL for describing parameters which
+starting with version 1.3.0 is <a href="https://github.com/ruby-grape/grape/pull/1920">implemented using dry-types under the
+cover</a>. But that
+doesn’t make it much easier to use <code class="language-plaintext highlighter-rouge">dry-validation</code> (a layer above
+it). Here’s the open <a href="https://github.com/ruby-grape/grape/issues/2386">feature
+request</a>.</p>
+
+<h2 id="problem-statement">Problem statement</h2>
+
+<p>Our goal here will be to declare the parameters for an API endpoint
+using a <code class="language-plaintext highlighter-rouge">dry-validation</code> contract, have it check and coerce the
+inputs, and in the case when the validation fails, send the response
+describe the failure in the same format as the built-in validation
+does, let’s say, for interoperability.</p>
+
+<p>Here’s an example:</p>
+
+<div class="language-rb highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">module</span> <span class="nn">Apples</span>
+  <span class="k">class</span> <span class="nc">API</span> <span class="o">&lt;</span> <span class="no">Grape</span><span class="o">::</span><span class="no">API</span>
+    <span class="nb">format</span> <span class="ss">:json</span>
+    <span class="n">prefix</span> <span class="ss">:api</span>
+
+    <span class="n">resource</span> <span class="ss">:orders</span> <span class="k">do</span>
+      <span class="n">desc</span> <span class="s1">'Create new'</span>
+      <span class="n">params</span> <span class="k">do</span>
+        <span class="n">requires</span> <span class="ss">:order</span><span class="p">,</span> <span class="ss">type: </span><span class="no">Hash</span> <span class="k">do</span>
+          <span class="n">requires</span> <span class="ss">:baskets</span><span class="p">,</span> <span class="ss">type: </span><span class="no">Array</span> <span class="k">do</span>
+            <span class="n">requires</span> <span class="ss">:color</span><span class="p">,</span> <span class="ss">type: </span><span class="no">String</span><span class="p">,</span> <span class="ss">values: </span><span class="sx">%w[green red yellow]</span>
+            <span class="n">optional</span> <span class="ss">:count</span><span class="p">,</span> <span class="ss">type: </span><span class="no">Integer</span><span class="p">,</span> <span class="ss">default: </span><span class="mi">10</span>
+          <span class="k">end</span>
+        <span class="k">end</span>
+      <span class="k">end</span>
+      <span class="n">post</span> <span class="k">do</span>
+        <span class="no">Order</span><span class="p">.</span><span class="nf">create!</span><span class="p">(</span><span class="n">declared</span><span class="p">(</span><span class="n">params</span><span class="p">))</span>
+      <span class="k">end</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</code></pre></div></div>
+
+<p>Our endpoint creates a nice big order of several baskets of apples,
+each from one of three varieties.</p>
+
+<p>Here’s a faulty request and the response we get (for two attributes we messed up):</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>curl <span class="nt">-H</span> <span class="s1">'Content-Type: application/json'</span> http://localhost:9292/api/orders/ <span class="se">\</span>
+       <span class="nt">-d</span> <span class="s1">'{"order": {"baskets": [{"clor": 10, "count": "red"}]}}'</span>
+<span class="o">{</span><span class="s2">"error"</span>:<span class="s2">"order[baskets][0][color] is missing, order[baskets][0][count] is invalid"</span><span class="o">}</span>
+</code></pre></div></div>
+
+<p>The error value enumerates all the invalid attributes, printing their full paths.</p>
+
+<h2 id="custom-type">Custom type</h2>
+
+<p>Here’s how this structure can be described with <code class="language-plaintext highlighter-rouge">dry-rb</code>:</p>
+
+<div class="language-rb highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="no">ColorString</span> <span class="o">=</span> <span class="no">Dry</span><span class="o">::</span><span class="no">Types</span><span class="p">[</span><span class="s1">'string'</span><span class="p">].</span><span class="nf">constrained</span><span class="p">(</span><span class="ss">included_in: </span><span class="sx">%w(green red yellow)</span><span class="p">)</span>
+
+<span class="no">BasketSchema</span> <span class="o">=</span> <span class="no">Dry</span><span class="o">::</span><span class="no">Schema</span><span class="o">.</span><span class="no">Params</span> <span class="k">do</span>
+  <span class="n">required</span><span class="p">(</span><span class="ss">:color</span><span class="p">).</span><span class="nf">filled</span><span class="p">(</span><span class="no">ColorString</span><span class="p">)</span>
+  <span class="n">optional</span><span class="p">(</span><span class="ss">:count</span><span class="p">).</span><span class="nf">filled</span><span class="p">(</span><span class="no">Dry</span><span class="o">::</span><span class="no">Types</span><span class="p">[</span><span class="s1">'integer'</span><span class="p">].</span><span class="nf">default</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
+<span class="k">end</span>
+
+<span class="k">class</span> <span class="nc">OrderContract</span> <span class="o">&lt;</span> <span class="no">Dry</span><span class="o">::</span><span class="no">Validation</span><span class="o">::</span><span class="no">Contract</span>
+  <span class="n">params</span> <span class="k">do</span>
+    <span class="n">required</span><span class="p">(</span><span class="ss">:baskets</span><span class="p">).</span><span class="nf">array</span><span class="p">(</span><span class="no">BasketSchema</span><span class="p">)</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</code></pre></div></div>
+
+<p>One unsatisfying approach is to try the <a href="https://github.com/ruby-grape/grape#custom-types-and-coercions">documented way to use the
+custom types</a>
+by defining <code class="language-plaintext highlighter-rouge">self.parse</code> on the type. It will almost work, but there
+is no way to get the name of the “wrapper” attribute (<code class="language-plaintext highlighter-rouge">order</code> in our
+example):</p>
+
+<div class="language-rb highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">params</span> <span class="k">do</span>
+  <span class="n">requires</span> <span class="ss">:order</span><span class="p">,</span> <span class="ss">type: </span><span class="no">OrderContract</span>
+<span class="k">end</span>
+</code></pre></div></div>
+
+<p>And Grape will prepend the wrapper’s name to the returned error
+message, which seems difficult to print right when there are several
+validation errors within our structure. So <code class="language-plaintext highlighter-rouge">self.parse</code> seems to be
+better suited for “leaf” values.</p>
+
+<h2 id="simple-delegation">Simple delegation</h2>
+
+<p>Okay, referencing the contract in <code class="language-plaintext highlighter-rouge">params</code> seems problematic. Let’s
+drop that block entirely and do the validation inside the handler.</p>
+
+<p>We create a new class which will call our contract to validate, raise
+an exception (our custom type) to signal failure, and in the case of
+success yields to the block. The error is formatted from the structure
+the validator gives us:</p>
+
+<div class="language-rb highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="no">ContractError</span> <span class="o">=</span> <span class="no">Class</span><span class="p">.</span><span class="nf">new</span><span class="p">(</span><span class="no">StandardError</span><span class="p">)</span>
+
+  <span class="k">class</span> <span class="nc">ApiContract</span> <span class="o">&lt;</span> <span class="no">Dry</span><span class="o">::</span><span class="no">Validation</span><span class="o">::</span><span class="no">Contract</span>
+    <span class="k">def</span> <span class="nf">validate!</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+      <span class="n">res</span> <span class="o">=</span> <span class="n">call</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+      <span class="k">if</span> <span class="n">res</span><span class="p">.</span><span class="nf">success?</span>
+        <span class="k">yield</span> <span class="n">res</span><span class="p">.</span><span class="nf">to_h</span>
+      <span class="k">else</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">errors_array</span><span class="p">(</span><span class="n">res</span><span class="p">.</span><span class="nf">errors</span><span class="p">.</span><span class="nf">to_h</span><span class="p">,</span> <span class="kp">false</span><span class="p">).</span><span class="nf">join</span><span class="p">(</span><span class="s1">', '</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="no">ContractError</span><span class="p">.</span><span class="nf">new</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+      <span class="k">end</span>
+    <span class="k">end</span>
+
+    <span class="k">def</span> <span class="nf">errors_array</span><span class="p">(</span><span class="n">hsh</span><span class="p">,</span> <span class="n">decorate</span> <span class="o">=</span> <span class="kp">true</span><span class="p">)</span>
+      <span class="n">res</span> <span class="o">=</span> <span class="p">[]</span>
+
+      <span class="n">hsh</span><span class="p">.</span><span class="nf">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="o">|</span>
+        <span class="n">key</span> <span class="o">=</span> <span class="k">if</span> <span class="n">decorate</span>
+                <span class="s2">"[</span><span class="si">#{</span><span class="n">key</span><span class="si">}</span><span class="s2">]"</span>
+              <span class="k">else</span>
+                <span class="n">key</span><span class="p">.</span><span class="nf">to_s</span>
+              <span class="k">end</span>
+
+        <span class="k">case</span> <span class="n">value</span>
+        <span class="k">when</span> <span class="no">String</span>
+          <span class="n">res</span> <span class="o">&lt;&lt;</span> <span class="p">[</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">]</span>
+        <span class="k">when</span> <span class="no">Array</span>
+          <span class="n">value</span><span class="p">.</span><span class="nf">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">s</span><span class="o">|</span>
+            <span class="n">res</span> <span class="o">&lt;&lt;</span> <span class="p">[</span><span class="n">key</span><span class="p">,</span> <span class="n">s</span><span class="p">]</span>
+          <span class="k">end</span>
+        <span class="k">else</span> <span class="c1"># Should be Hash.</span>
+          <span class="n">errors_array</span><span class="p">(</span><span class="n">value</span><span class="p">).</span><span class="nf">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">subkey</span><span class="p">,</span> <span class="n">s</span><span class="o">|</span>
+            <span class="n">res</span> <span class="o">&lt;&lt;</span> <span class="p">[</span><span class="n">key</span> <span class="o">+</span> <span class="n">subkey</span><span class="p">.</span><span class="nf">to_s</span><span class="p">,</span> <span class="n">s</span><span class="p">]</span>
+          <span class="k">end</span>
+        <span class="k">end</span>
+      <span class="k">end</span>
+
+      <span class="n">res</span><span class="p">.</span><span class="nf">map!</span> <span class="p">{</span> <span class="o">|</span><span class="n">arr</span><span class="o">|</span> <span class="n">arr</span><span class="p">.</span><span class="nf">compact</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="s1">' '</span><span class="p">)</span> <span class="p">}</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+
+  <span class="c1"># ...</span>
+
+  <span class="k">class</span> <span class="nc">CreateOrderContract</span> <span class="o">&lt;</span> <span class="no">ApiContract</span>
+    <span class="n">params</span> <span class="k">do</span>
+      <span class="n">required</span><span class="p">(</span><span class="ss">:order</span><span class="p">).</span><span class="nf">filled</span><span class="p">(</span><span class="no">OrderSchema</span><span class="p">)</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+
+  <span class="c1"># ...</span>
+
+  <span class="k">class</span> <span class="nc">API</span> <span class="o">&lt;</span> <span class="no">Grape</span><span class="o">::</span><span class="no">API</span>
+    <span class="nb">format</span> <span class="ss">:json</span>
+    <span class="n">prefix</span> <span class="ss">:api</span>
+
+    <span class="n">rescue_from</span> <span class="no">ContractError</span> <span class="k">do</span> <span class="o">|</span><span class="n">e</span><span class="o">|</span>
+      <span class="n">error!</span><span class="p">({</span><span class="ss">error: </span><span class="n">e</span><span class="p">.</span><span class="nf">message</span><span class="p">},</span> <span class="mi">400</span><span class="p">)</span>
+    <span class="k">end</span>
+
+    <span class="n">resource</span> <span class="ss">:orders</span> <span class="k">do</span>
+      <span class="n">desc</span> <span class="s1">'Create new'</span>
+      <span class="n">post</span> <span class="k">do</span>
+        <span class="no">CreateOrderContract</span><span class="p">.</span><span class="nf">new</span><span class="p">.</span><span class="nf">validate!</span><span class="p">(</span><span class="n">params</span><span class="p">)</span> <span class="k">do</span> <span class="o">|</span><span class="n">attrs</span><span class="o">|</span>
+          <span class="n">order</span> <span class="o">=</span> <span class="no">Order</span><span class="p">.</span><span class="nf">create!</span><span class="p">(</span><span class="n">attrs</span><span class="p">)</span>
+          <span class="n">body</span> <span class="n">order</span>
+        <span class="k">end</span>
+      <span class="k">end</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+</code></pre></div></div>
+
+<p>This reaches our goal (correct response format). Whether to actually
+use Grape’s format or keep the nested structure, is user’s choice. But
+this way we control the response either way.</p>
+
+<h2 id="custom-dsl">Custom DSL</h2>
+
+<p>The above is a little verbose, though. And it adds an extra nesting
+level. What if we wanted to make the usage more succinct?</p>
+
+<p>Looking at how the <code class="language-plaintext highlighter-rouge">params</code> block <a href="https://github.com/ruby-grape/grape/blob/master/lib/grape/validations/params_scope.rb">is implemented</a>,
+the class <code class="language-plaintext highlighter-rouge">Grape::Validations::ParamsScope</code> applies itself to the
+current endpoint by setting three “namespace stackable” attributes:
+<code class="language-plaintext highlighter-rouge">declared_params</code>, <code class="language-plaintext highlighter-rouge">renamed_params</code> and <code class="language-plaintext highlighter-rouge">validations</code>. We will use
+neither, using our own attribute to store the assigned contract.</p>
+
+<p>If we just add a helper to fetch the validated input, we don’t need to
+convert the schema to what <code class="language-plaintext highlighter-rouge">declared</code> understands. This could also be
+extended later so that the contract and declared params are used
+together, if needed.</p>
+
+<p>We also define an error type inheriting from
+<code class="language-plaintext highlighter-rouge">Grape::Exceptions::Base</code>, so Grape handles it appropriately by
+default, but that can still be overridden in some (or all) endpoints
+using <code class="language-plaintext highlighter-rouge">rescue_from</code>.</p>
+
+<p>The new implementation:</p>
+
+<div class="language-rb highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">module</span> <span class="nn">GrapeContract</span>
+  <span class="k">class</span> <span class="nc">ValidationError</span> <span class="o">&lt;</span> <span class="no">Grape</span><span class="o">::</span><span class="no">Exceptions</span><span class="o">::</span><span class="no">Base</span>
+    <span class="c1"># @return [Dry::Validation::MessageSet]</span>
+    <span class="nb">attr_reader</span> <span class="ss">:errors</span>
+
+    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">errors</span><span class="p">:,</span> <span class="ss">headers: </span><span class="kp">nil</span><span class="p">)</span>
+      <span class="vi">@errors</span> <span class="o">=</span> <span class="n">errors</span>
+      <span class="n">message</span> <span class="o">=</span> <span class="n">errors_array</span><span class="p">(</span><span class="n">errors</span><span class="p">.</span><span class="nf">to_h</span><span class="p">,</span> <span class="kp">false</span><span class="p">).</span><span class="nf">join</span><span class="p">(</span><span class="s1">', '</span><span class="p">)</span>
+      <span class="k">super</span><span class="p">(</span><span class="ss">status: </span><span class="mi">400</span><span class="p">,</span> <span class="ss">message: </span><span class="n">message</span><span class="p">,</span> <span class="ss">headers: </span><span class="n">headers</span><span class="p">)</span>
+    <span class="k">end</span>
+
+    <span class="kp">private</span>
+
+    <span class="k">def</span> <span class="nf">errors_array</span><span class="p">(</span><span class="n">hsh</span><span class="p">,</span> <span class="n">decorate</span> <span class="o">=</span> <span class="kp">true</span><span class="p">)</span>
+      <span class="c1"># ...</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+
+  <span class="k">module</span> <span class="nn">EndpointDSL</span>
+    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="n">kontrakt</span> <span class="o">=</span> <span class="kp">nil</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">block</span><span class="p">)</span>
+      <span class="k">unless</span> <span class="n">kontrakt</span>
+        <span class="n">kontrakt</span> <span class="o">=</span> <span class="no">Class</span><span class="p">.</span><span class="nf">new</span><span class="p">(</span><span class="no">Dry</span><span class="o">::</span><span class="no">Validation</span><span class="o">::</span><span class="no">Contract</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">block</span><span class="p">)</span>
+      <span class="k">end</span>
+
+      <span class="nb">self</span><span class="p">.</span><span class="nf">namespace_stackable</span><span class="p">(</span><span class="ss">:contract</span><span class="p">,</span> <span class="n">kontrakt</span><span class="p">)</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+
+  <span class="k">module</span> <span class="nn">InsideRouteHelper</span>
+    <span class="k">def</span> <span class="nf">contract_params</span>
+      <span class="n">kontrakt</span> <span class="o">=</span> <span class="n">namespace_stackable</span><span class="p">(</span><span class="ss">:contract</span><span class="p">).</span><span class="nf">last</span>
+
+      <span class="k">raise</span> <span class="s2">"No contract defined"</span> <span class="k">unless</span> <span class="n">kontrakt</span>
+
+      <span class="n">res</span> <span class="o">=</span> <span class="n">kontrakt</span><span class="p">.</span><span class="nf">new</span><span class="p">.</span><span class="nf">call</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+
+      <span class="k">if</span> <span class="n">res</span><span class="p">.</span><span class="nf">success?</span>
+        <span class="n">res</span><span class="p">.</span><span class="nf">to_h</span>
+      <span class="k">else</span>
+        <span class="k">raise</span> <span class="no">ValidationError</span><span class="p">.</span><span class="nf">new</span><span class="p">(</span><span class="ss">errors: </span><span class="n">res</span><span class="p">.</span><span class="nf">errors</span><span class="p">,</span> <span class="ss">headers: </span><span class="n">header</span><span class="p">)</span>
+      <span class="k">end</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+
+  <span class="c1"># Install these globally, for every endpoint.</span>
+  <span class="o">::</span><span class="no">Grape</span><span class="o">::</span><span class="no">API</span><span class="o">::</span><span class="no">Instance</span><span class="p">.</span><span class="nf">extend</span><span class="p">(</span><span class="no">EndpointDSL</span><span class="p">)</span>
+  <span class="o">::</span><span class="no">Grape</span><span class="o">::</span><span class="no">DSL</span><span class="o">::</span><span class="no">InsideRoute</span><span class="p">.</span><span class="nf">include</span><span class="p">(</span><span class="no">InsideRouteHelper</span><span class="p">)</span>
+<span class="k">end</span>
+</code></pre></div></div>
+
+<p>Now it can be used like</p>
+
+<div class="language-rb highlighter-rouge"><div class="highlight"><pre class="highlight"><code>       <span class="n">desc</span> <span class="s1">'Create new'</span>
+       <span class="n">contract</span> <span class="no">CreateOrderContract</span>
+       <span class="n">post</span> <span class="k">do</span>
+</code></pre></div></div>
+
+<p>or even defining the contract inline:</p>
+
+<div class="language-rb highlighter-rouge"><div class="highlight"><pre class="highlight"><code>      <span class="n">desc</span> <span class="s1">'Create new'</span>
+      <span class="n">contract</span> <span class="k">do</span>
+        <span class="n">params</span> <span class="k">do</span>
+          <span class="n">required</span><span class="p">(</span><span class="ss">:order</span><span class="p">).</span><span class="nf">filled</span><span class="p">(</span><span class="no">OrderSchema</span><span class="p">)</span>
+        <span class="k">end</span>
+
+        <span class="n">rule</span><span class="p">(</span><span class="ss">:order</span><span class="p">)</span> <span class="k">do</span>
+          <span class="k">next</span> <span class="k">if</span> <span class="n">value</span><span class="p">[</span><span class="ss">:baskets</span><span class="p">].</span><span class="nf">count</span> <span class="o">&lt;</span> <span class="mi">10</span>
+
+          <span class="n">key</span><span class="p">.</span><span class="nf">failure</span><span class="p">(</span><span class="s1">'contains too many baskets'</span><span class="p">)</span>
+        <span class="k">end</span>
+      <span class="k">end</span>
+      <span class="n">post</span> <span class="k">do</span>
+</code></pre></div></div>
+
+<p>See <a href="https://github.com/dgutov/grape-dry-validation-example">this repository</a>
+for the full example.</p>
+
+  </div><div id="disqus_thread"></div>
+  <script>
+    var disqus_config = function () {
+      this.page.url = 'http://dgutov.github.io/2024/03/12/using-dry-validation-with-grape/';
+      this.page.identifier = 'http://dgutov.github.io/2024/03/12/using-dry-validation-with-grape/';
+    };
+
+    (function() {
+      var d = document, s = d.createElement('script');
+
+      s.src = 'https://dgutov-github.disqus.com/embed.js';
+
+      s.setAttribute('data-timestamp', +new Date());
+      (d.head || d.body).appendChild(s);
+    })();
+  </script>
+  <noscript>Please enable JavaScript to view the <a href="https://disqus.com/?ref_noscript" rel="nofollow">comments powered by Disqus.</a></noscript><a class="u-url" href="/2024/03/12/using-dry-validation-with-grape/" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Emacs and stuff</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Dmitry Gutov</li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/dgutov"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">dgutov</span></a></li><li><a href="https://www.twitter.com/dgutov"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#twitter"></use></svg> <span class="username">dgutov</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>An awesome description here.</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>
