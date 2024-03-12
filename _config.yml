@@ -21,7 +21,7 @@
 title: On coding and tools
 email:
 description: >- # this means to ignore newlines until "baseurl:"
-  An awesome description here.
+  An awesome description here
 baseurl:
 url: http://dgutov.github.io
 twitter_username: dgutov
