@@ -18,7 +18,7 @@
 <meta name="twitter:card" content="summary" />
 <meta property="twitter:title" content="Using dry-validation with Grape" />
 <script type="application/ld+json">
-{"@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"http://dgutov.github.io/2024/03/12/using-dry-validation-with-grape/"},"url":"http://dgutov.github.io/2024/03/12/using-dry-validation-with-grape/","author":{"@type":"Person","name":"Dmitry Gutov"},"headline":"Using dry-validation with Grape","dateModified":"2024-03-12T01:03:00+02:00","datePublished":"2024-03-12T01:03:00+02:00","description":"Intro","@context":"https://schema.org"}</script>
+{"@type":"BlogPosting","datePublished":"2024-03-12T01:03:00+02:00","mainEntityOfPage":{"@type":"WebPage","@id":"http://dgutov.github.io/2024/03/12/using-dry-validation-with-grape/"},"url":"http://dgutov.github.io/2024/03/12/using-dry-validation-with-grape/","author":{"@type":"Person","name":"Dmitry Gutov"},"description":"Intro","headline":"Using dry-validation with Grape","dateModified":"2024-03-12T01:03:00+02:00","@context":"https://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 <link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://dgutov.github.io/feed.xml" title="On coding and tools" /></head>
 <body><header class="site-header" role="banner">
@@ -316,6 +316,8 @@ using <code class="language-plaintext highlighter-rouge">rescue_from</code>.</p>
 <div class="language-rb highlighter-rouge"><div class="highlight"><pre class="highlight"><code>       <span class="n">desc</span> <span class="s1">'Create new'</span>
        <span class="n">contract</span> <span class="no">CreateOrderContract</span>
        <span class="n">post</span> <span class="k">do</span>
+         <span class="no">Order</span><span class="p">.</span><span class="nf">create!</span><span class="p">(</span><span class="n">contract_params</span><span class="p">)</span>
+       <span class="k">end</span>
 </code></pre></div></div>
 
 <p>or even defining the contract inline:</p>
