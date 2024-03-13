@@ -278,6 +278,8 @@ Now it can be used like
        desc 'Create new'
        contract CreateOrderContract
        post do
+         Order.create!(contract_params)
+       end
 ```
 
 or even defining the contract inline:
