@@ -278,4 +278,18 @@ kbd { border-style: outset; border-width: 2px; border-color: #999999; border-rad
 
 img { max-width: 90%; display: block; margin-left: auto; margin-right: auto; }
 
+.site-header { padding: 1rem 2rem; }
+
+.site-title { font-size: 1.8rem; font-weight: bold; }
+
+nav { margin-top: 1rem; }
+
+nav a { padding: 0.5rem 1rem; font-weight: bold; }
+
+.post-title { font-size: 2.3rem; margin-bottom: 0.5rem; }
+
+h2 { color: #e74c3c; }
+
+.post-content h2 { font-size: 1.8rem; }
+
 /*# sourceMappingURL=main.css.map */
