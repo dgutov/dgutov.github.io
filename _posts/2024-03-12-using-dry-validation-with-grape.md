@@ -119,7 +119,7 @@ drop that block entirely and do the validation inside the handler.
 We create a new class which will call our contract to validate, raise
 an exception (our custom type) to signal failure, and in the case of
 success yields to the block. The error is formatted from the structure
-the validator gives us:
+the validator returns:
 
 ```rb
   ContractError = Class.new(StandardError)
@@ -131,36 +131,16 @@ the validator gives us:
       if res.success?
         yield res.to_h
       else
-        message = errors_array(res.errors.to_h, false).join(', ')
+        message = res.errors.messages.map do |message|
+          full_name = message.path.first.to_s
+
+          full_name += "[#{message.path[1..].join('][')}]" if message.path.size > 1
+
+          "#{full_name} #{message.text}"
+        end.join(', ')
+
         raise ContractError.new(message)
       end
-    end
-
-    def errors_array(hsh, decorate = true)
-      res = []
-
-      hsh.each do |key, value|
-        key = if decorate
-                "[#{key}]"
-              else
-                key.to_s
-              end
-
-        case value
-        when String
-          res << [key, value]
-        when Array
-          value.each do |s|
-            res << [key, s]
-          end
-        else # Should be Hash.
-          errors_array(value).each do |subkey, s|
-            res << [key + subkey.to_s, s]
-          end
-        end
-      end
-
-      res.map! { |arr| arr.compact.join(' ') }
     end
   end
 
@@ -229,7 +209,7 @@ module GrapeContract
 
     def initialize(errors:, headers: nil)
       @errors = errors
-      message = errors_array(errors.to_h, false).join(', ')
+      message = errors.messages.map ...
       super(status: 400, message: message, headers: headers)
     end
 
