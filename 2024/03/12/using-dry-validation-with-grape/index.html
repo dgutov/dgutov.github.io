@@ -18,7 +18,7 @@
 <meta name="twitter:card" content="summary" />
 <meta property="twitter:title" content="Using dry-validation with Grape" />
 <script type="application/ld+json">
-{"@type":"BlogPosting","datePublished":"2024-03-12T01:03:00+02:00","mainEntityOfPage":{"@type":"WebPage","@id":"http://dgutov.github.io/2024/03/12/using-dry-validation-with-grape/"},"url":"http://dgutov.github.io/2024/03/12/using-dry-validation-with-grape/","author":{"@type":"Person","name":"Dmitry Gutov"},"description":"Intro","headline":"Using dry-validation with Grape","dateModified":"2024-03-12T01:03:00+02:00","@context":"https://schema.org"}</script>
+{"author":{"@type":"Person","name":"Dmitry Gutov"},"headline":"Using dry-validation with Grape","dateModified":"2024-03-12T01:03:00+02:00","datePublished":"2024-03-12T01:03:00+02:00","description":"Intro","url":"http://dgutov.github.io/2024/03/12/using-dry-validation-with-grape/","@type":"BlogPosting","mainEntityOfPage":{"@type":"WebPage","@id":"http://dgutov.github.io/2024/03/12/using-dry-validation-with-grape/"},"@context":"https://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 <link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://dgutov.github.io/feed.xml" title="On coding and tools" /></head>
 <body><header class="site-header" role="banner">
@@ -160,7 +160,7 @@ drop that block entirely and do the validation inside the handler.</p>
 <p>We create a new class which will call our contract to validate, raise
 an exception (our custom type) to signal failure, and in the case of
 success yields to the block. The error is formatted from the structure
-the validator gives us:</p>
+the validator returns:</p>
 
 <div class="language-rb highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="no">ContractError</span> <span class="o">=</span> <span class="no">Class</span><span class="p">.</span><span class="nf">new</span><span class="p">(</span><span class="no">StandardError</span><span class="p">)</span>
 
@@ -171,36 +171,16 @@ the validator gives us:</p>
       <span class="k">if</span> <span class="n">res</span><span class="p">.</span><span class="nf">success?</span>
         <span class="k">yield</span> <span class="n">res</span><span class="p">.</span><span class="nf">to_h</span>
       <span class="k">else</span>
-        <span class="n">message</span> <span class="o">=</span> <span class="n">errors_array</span><span class="p">(</span><span class="n">res</span><span class="p">.</span><span class="nf">errors</span><span class="p">.</span><span class="nf">to_h</span><span class="p">,</span> <span class="kp">false</span><span class="p">).</span><span class="nf">join</span><span class="p">(</span><span class="s1">', '</span><span class="p">)</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="n">res</span><span class="p">.</span><span class="nf">errors</span><span class="p">.</span><span class="nf">messages</span><span class="p">.</span><span class="nf">map</span> <span class="k">do</span> <span class="o">|</span><span class="n">message</span><span class="o">|</span>
+          <span class="n">full_name</span> <span class="o">=</span> <span class="n">message</span><span class="p">.</span><span class="nf">path</span><span class="p">.</span><span class="nf">first</span><span class="p">.</span><span class="nf">to_s</span>
+
+          <span class="n">full_name</span> <span class="o">+=</span> <span class="s2">"[</span><span class="si">#{</span><span class="n">message</span><span class="p">.</span><span class="nf">path</span><span class="p">[</span><span class="mi">1</span><span class="o">..</span><span class="p">].</span><span class="nf">join</span><span class="p">(</span><span class="s1">']['</span><span class="p">)</span><span class="si">}</span><span class="s2">]"</span> <span class="k">if</span> <span class="n">message</span><span class="p">.</span><span class="nf">path</span><span class="p">.</span><span class="nf">size</span> <span class="o">&gt;</span> <span class="mi">1</span>
+
+          <span class="s2">"</span><span class="si">#{</span><span class="n">full_name</span><span class="si">}</span><span class="s2"> </span><span class="si">#{</span><span class="n">message</span><span class="p">.</span><span class="nf">text</span><span class="si">}</span><span class="s2">"</span>
+        <span class="k">end</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="s1">', '</span><span class="p">)</span>
+
         <span class="k">raise</span> <span class="no">ContractError</span><span class="p">.</span><span class="nf">new</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
       <span class="k">end</span>
-    <span class="k">end</span>
-
-    <span class="k">def</span> <span class="nf">errors_array</span><span class="p">(</span><span class="n">hsh</span><span class="p">,</span> <span class="n">decorate</span> <span class="o">=</span> <span class="kp">true</span><span class="p">)</span>
-      <span class="n">res</span> <span class="o">=</span> <span class="p">[]</span>
-
-      <span class="n">hsh</span><span class="p">.</span><span class="nf">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="o">|</span>
-        <span class="n">key</span> <span class="o">=</span> <span class="k">if</span> <span class="n">decorate</span>
-                <span class="s2">"[</span><span class="si">#{</span><span class="n">key</span><span class="si">}</span><span class="s2">]"</span>
-              <span class="k">else</span>
-                <span class="n">key</span><span class="p">.</span><span class="nf">to_s</span>
-              <span class="k">end</span>
-
-        <span class="k">case</span> <span class="n">value</span>
-        <span class="k">when</span> <span class="no">String</span>
-          <span class="n">res</span> <span class="o">&lt;&lt;</span> <span class="p">[</span><span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">]</span>
-        <span class="k">when</span> <span class="no">Array</span>
-          <span class="n">value</span><span class="p">.</span><span class="nf">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">s</span><span class="o">|</span>
-            <span class="n">res</span> <span class="o">&lt;&lt;</span> <span class="p">[</span><span class="n">key</span><span class="p">,</span> <span class="n">s</span><span class="p">]</span>
-          <span class="k">end</span>
-        <span class="k">else</span> <span class="c1"># Should be Hash.</span>
-          <span class="n">errors_array</span><span class="p">(</span><span class="n">value</span><span class="p">).</span><span class="nf">each</span> <span class="k">do</span> <span class="o">|</span><span class="n">subkey</span><span class="p">,</span> <span class="n">s</span><span class="o">|</span>
-            <span class="n">res</span> <span class="o">&lt;&lt;</span> <span class="p">[</span><span class="n">key</span> <span class="o">+</span> <span class="n">subkey</span><span class="p">.</span><span class="nf">to_s</span><span class="p">,</span> <span class="n">s</span><span class="p">]</span>
-          <span class="k">end</span>
-        <span class="k">end</span>
-      <span class="k">end</span>
-
-      <span class="n">res</span><span class="p">.</span><span class="nf">map!</span> <span class="p">{</span> <span class="o">|</span><span class="n">arr</span><span class="o">|</span> <span class="n">arr</span><span class="p">.</span><span class="nf">compact</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="s1">' '</span><span class="p">)</span> <span class="p">}</span>
     <span class="k">end</span>
   <span class="k">end</span>
 
@@ -268,7 +248,7 @@ using <code class="language-plaintext highlighter-rouge">rescue_from</code>.</p>
 
     <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="n">errors</span><span class="p">:,</span> <span class="ss">headers: </span><span class="kp">nil</span><span class="p">)</span>
       <span class="vi">@errors</span> <span class="o">=</span> <span class="n">errors</span>
-      <span class="n">message</span> <span class="o">=</span> <span class="n">errors_array</span><span class="p">(</span><span class="n">errors</span><span class="p">.</span><span class="nf">to_h</span><span class="p">,</span> <span class="kp">false</span><span class="p">).</span><span class="nf">join</span><span class="p">(</span><span class="s1">', '</span><span class="p">)</span>
+      <span class="n">message</span> <span class="o">=</span> <span class="n">errors</span><span class="p">.</span><span class="nf">messages</span><span class="p">.</span><span class="nf">map</span> <span class="o">...</span>
       <span class="k">super</span><span class="p">(</span><span class="ss">status: </span><span class="mi">400</span><span class="p">,</span> <span class="ss">message: </span><span class="n">message</span><span class="p">,</span> <span class="ss">headers: </span><span class="n">headers</span><span class="p">)</span>
     <span class="k">end</span>
 
@@ -280,22 +260,22 @@ using <code class="language-plaintext highlighter-rouge">rescue_from</code>.</p>
   <span class="k">end</span>
 
   <span class="k">module</span> <span class="nn">EndpointDSL</span>
-    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="n">kontrakt</span> <span class="o">=</span> <span class="kp">nil</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">block</span><span class="p">)</span>
-      <span class="k">unless</span> <span class="n">kontrakt</span>
-        <span class="n">kontrakt</span> <span class="o">=</span> <span class="no">Class</span><span class="p">.</span><span class="nf">new</span><span class="p">(</span><span class="no">Dry</span><span class="o">::</span><span class="no">Validation</span><span class="o">::</span><span class="no">Contract</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">block</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">contract</span><span class="p">(</span><span class="n">klass</span> <span class="o">=</span> <span class="kp">nil</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">block</span><span class="p">)</span>
+      <span class="k">unless</span> <span class="n">klass</span>
+        <span class="n">klass</span> <span class="o">=</span> <span class="no">Class</span><span class="p">.</span><span class="nf">new</span><span class="p">(</span><span class="no">Dry</span><span class="o">::</span><span class="no">Validation</span><span class="o">::</span><span class="no">Contract</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">block</span><span class="p">)</span>
       <span class="k">end</span>
 
-      <span class="nb">self</span><span class="p">.</span><span class="nf">namespace_stackable</span><span class="p">(</span><span class="ss">:contract</span><span class="p">,</span> <span class="n">kontrakt</span><span class="p">)</span>
+      <span class="nb">self</span><span class="p">.</span><span class="nf">namespace_stackable</span><span class="p">(</span><span class="ss">:contract</span><span class="p">,</span> <span class="n">klass</span><span class="p">)</span>
     <span class="k">end</span>
   <span class="k">end</span>
 
   <span class="k">module</span> <span class="nn">InsideRouteHelper</span>
     <span class="k">def</span> <span class="nf">contract_params</span>
-      <span class="n">kontrakt</span> <span class="o">=</span> <span class="n">namespace_stackable</span><span class="p">(</span><span class="ss">:contract</span><span class="p">).</span><span class="nf">last</span>
+      <span class="n">klass</span> <span class="o">=</span> <span class="n">namespace_stackable</span><span class="p">(</span><span class="ss">:contract</span><span class="p">).</span><span class="nf">last</span>
 
-      <span class="k">raise</span> <span class="s2">"No contract defined"</span> <span class="k">unless</span> <span class="n">kontrakt</span>
+      <span class="k">raise</span> <span class="s2">"No contract defined"</span> <span class="k">unless</span> <span class="n">klass</span>
 
-      <span class="n">res</span> <span class="o">=</span> <span class="n">kontrakt</span><span class="p">.</span><span class="nf">new</span><span class="p">.</span><span class="nf">call</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+      <span class="n">res</span> <span class="o">=</span> <span class="n">klass</span><span class="p">.</span><span class="nf">new</span><span class="p">.</span><span class="nf">call</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
 
       <span class="k">if</span> <span class="n">res</span><span class="p">.</span><span class="nf">success?</span>
         <span class="n">res</span><span class="p">.</span><span class="nf">to_h</span>
