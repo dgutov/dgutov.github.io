@@ -221,22 +221,22 @@ module GrapeContract
   end
 
   module EndpointDSL
-    def contract(kontrakt = nil, &block)
-      unless kontrakt
-        kontrakt = Class.new(Dry::Validation::Contract, &block)
+    def contract(klass = nil, &block)
+      unless klass
+        klass = Class.new(Dry::Validation::Contract, &block)
       end
 
-      self.namespace_stackable(:contract, kontrakt)
+      self.namespace_stackable(:contract, klass)
     end
   end
 
   module InsideRouteHelper
     def contract_params
-      kontrakt = namespace_stackable(:contract).last
+      klass = namespace_stackable(:contract).last
 
-      raise "No contract defined" unless kontrakt
+      raise "No contract defined" unless klass
 
-      res = kontrakt.new.call(params)
+      res = klass.new.call(params)
 
       if res.success?
         res.to_h
