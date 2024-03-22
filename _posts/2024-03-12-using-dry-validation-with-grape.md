@@ -212,12 +212,6 @@ module GrapeContract
       message = errors.messages.map ...
       super(status: 400, message: message, headers: headers)
     end
-
-    private
-
-    def errors_array(hsh, decorate = true)
-      # ...
-    end
   end
 
   module EndpointDSL
