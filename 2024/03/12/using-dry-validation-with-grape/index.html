@@ -251,12 +251,6 @@ using <code class="language-plaintext highlighter-rouge">rescue_from</code>.</p>
       <span class="n">message</span> <span class="o">=</span> <span class="n">errors</span><span class="p">.</span><span class="nf">messages</span><span class="p">.</span><span class="nf">map</span> <span class="o">...</span>
       <span class="k">super</span><span class="p">(</span><span class="ss">status: </span><span class="mi">400</span><span class="p">,</span> <span class="ss">message: </span><span class="n">message</span><span class="p">,</span> <span class="ss">headers: </span><span class="n">headers</span><span class="p">)</span>
     <span class="k">end</span>
-
-    <span class="kp">private</span>
-
-    <span class="k">def</span> <span class="nf">errors_array</span><span class="p">(</span><span class="n">hsh</span><span class="p">,</span> <span class="n">decorate</span> <span class="o">=</span> <span class="kp">true</span><span class="p">)</span>
-      <span class="c1"># ...</span>
-    <span class="k">end</span>
   <span class="k">end</span>
 
   <span class="k">module</span> <span class="nn">EndpointDSL</span>
