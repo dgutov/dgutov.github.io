@@ -3,6 +3,9 @@ layout: post
 title: Using dry-validation with Grape
 date: 2024-03-12 01:03 +0200
 ---
+**UPDATE:** This feature (with certain changes in syntax)
+[will be in Grape 2.1.0](https://github.com/ruby-grape/grape/blob/master/CHANGELOG.md).
+
 ## Intro
 
 [Grape](https://github.com/ruby-grape/grape/) is a popular web
